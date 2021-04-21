@@ -36,6 +36,7 @@ using Avalonia.Media;
 using Avalonia.Data;
 using AvaloniaEdit.Search;
 
+#nullable enable
 namespace AvaloniaEdit
 {
     /// <summary>
@@ -85,6 +86,7 @@ namespace AvaloniaEdit
             SetValue(DocumentProperty, document);
 
             textArea[!BackgroundProperty] = this[!BackgroundProperty];
+            textArea.TextView[!TextView.WordWrapProperty] = this[!WordWrapProperty];
         }
 
         #endregion
@@ -113,10 +115,66 @@ namespace AvaloniaEdit
             set => SetValue(DocumentProperty, value);
         }
 
+        public static readonly DirectProperty<TextEditor, IBrush?> DocumentBackgroundBrushProperty
+            = AvaloniaProperty.RegisterDirect<TextEditor, IBrush?>(nameof(DocumentBackgroundBrush), e => e.DocumentBackgroundBrush, (e, b) => e.DocumentBackgroundBrush = b);
+
+        private IBrush? _docBackgroundBrush;
+        public IBrush? DocumentBackgroundBrush
+		{
+            get => _docBackgroundBrush;
+            set
+            {
+                _docBackgroundBrush = value;
+                Document.BackgroundBrush = value;
+            }
+		}
+
+        public static readonly DirectProperty<TextEditor, double?> DocumentWidthProperty
+            = AvaloniaProperty.RegisterDirect<TextEditor, double?>(nameof(DocumentWidth), e => e.DocumentWidth, (e, w) => e.DocumentWidth = w);
+
+        private double? _docWidth;
+        public double? DocumentWidth
+        {
+            get => _docWidth;
+            set
+            {
+                _docWidth = value;
+                Document.PreferredWidth = value;
+            }
+        }
+
+        public static readonly DirectProperty<TextEditor, double> DocumentPaddingTopProperty
+            = AvaloniaProperty.RegisterDirect<TextEditor, double>(nameof(DocumentPaddingTop), e => e.DocumentPaddingTop, (e, w) => e.DocumentPaddingTop = w);
+
+        private double _docPaddingTop;
+        public double DocumentPaddingTop
+        {
+            get => _docPaddingTop;
+            set
+            {
+                _docPaddingTop = value;
+                Document.TopPadding = value;
+            }
+        }
+
+        public static readonly DirectProperty<TextEditor, double> DocumentPaddingBottomProperty
+            = AvaloniaProperty.RegisterDirect<TextEditor, double>(nameof(DocumentPaddingBottom), e => e.DocumentPaddingBottom, (e, w) => e.DocumentPaddingBottom = w);
+
+        private double _docPaddingBottom;
+        public double DocumentPaddingBottom
+        {
+            get => _docPaddingBottom;
+            set
+            {
+                _docPaddingBottom = value;
+                Document.BottomPadding = value;
+            }
+        }
+
         /// <summary>
         /// Occurs when the document property has changed.
         /// </summary>
-        public event EventHandler DocumentChanged;
+        public event EventHandler? DocumentChanged;
 
         /// <summary>
         /// Raises the <see cref="DocumentChanged"/> event.
@@ -128,10 +186,10 @@ namespace AvaloniaEdit
 
         private static void OnDocumentChanged(AvaloniaPropertyChangedEventArgs e)
         {
-            (e.Sender as TextEditor)?.OnDocumentChanged((TextDocument)e.OldValue, (TextDocument)e.NewValue);
+            (e.Sender as TextEditor)?.OnDocumentChanged(e.OldValue as TextDocument, e.NewValue as TextDocument);
         }
 
-        private void OnDocumentChanged(TextDocument oldValue, TextDocument newValue)
+        private void OnDocumentChanged(TextDocument? oldValue, TextDocument? newValue)
         {
             if (oldValue != null)
             {
@@ -143,6 +201,11 @@ namespace AvaloniaEdit
             {
                 TextDocumentWeakEventManager.TextChanged.AddHandler(newValue, OnTextChanged);
                 PropertyChangedWeakEventManager.AddHandler(newValue.UndoStack, OnUndoStackPropertyChangedHandler);
+
+                newValue.PreferredWidth = DocumentWidth;
+                newValue.BackgroundBrush = DocumentBackgroundBrush;
+                newValue.TopPadding = DocumentPaddingTop;
+                newValue.BottomPadding = DocumentPaddingBottom;
             }
             OnDocumentChanged(EventArgs.Empty);
             OnTextChanged(EventArgs.Empty);
@@ -169,7 +232,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Occurs when a text editor option has changed.
         /// </summary>
-        public event PropertyChangedEventHandler OptionChanged;
+        public event PropertyChangedEventHandler? OptionChanged;
 
         /// <summary>
         /// Raises the <see cref="OptionChanged"/> event.
@@ -181,10 +244,10 @@ namespace AvaloniaEdit
 
         private static void OnOptionsChanged(AvaloniaPropertyChangedEventArgs e)
         {
-            (e.Sender as TextEditor)?.OnOptionsChanged((TextEditorOptions)e.OldValue, (TextEditorOptions)e.NewValue);
+            (e.Sender as TextEditor)?.OnOptionsChanged(e.OldValue as TextEditorOptions, e.NewValue as TextEditorOptions);
         }
 
-        private void OnOptionsChanged(TextEditorOptions oldValue, TextEditorOptions newValue)
+        private void OnOptionsChanged(TextEditorOptions? oldValue, TextEditorOptions? newValue)
         {
             if (oldValue != null)
             {
@@ -198,12 +261,12 @@ namespace AvaloniaEdit
             OnOptionChanged(new PropertyChangedEventArgs(null));
         }
 
-        private void OnPropertyChangedHandler(object sender, PropertyChangedEventArgs e)
+        private void OnPropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
         {
             OnOptionChanged(e);
 
         }
-        private void OnUndoStackPropertyChangedHandler(object sender, PropertyChangedEventArgs e)
+        private void OnUndoStackPropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "IsOriginalFile")
             {
@@ -211,7 +274,7 @@ namespace AvaloniaEdit
             }
         }
 
-        private void OnTextChanged(object sender, EventArgs e)
+        private void OnTextChanged(object? sender, EventArgs e)
         {
             OnTextChanged(e);
         }
@@ -251,7 +314,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Occurs when the Text property changes.
         /// </summary>
-        public event EventHandler TextChanged;
+        public event EventHandler? TextChanged;
 
         /// <summary>
         /// Raises the <see cref="TextChanged"/> event.
@@ -268,10 +331,15 @@ namespace AvaloniaEdit
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
         {
             base.OnApplyTemplate(e);
+
+            //If the parent view is reloaded, a new content parent will be created, so we must first disconnect from the previous parent
+            if(TextArea.Parent is ScrollViewer parent)
+			{
+                parent.Content = null;
+			}
+
             ScrollViewer = (ScrollViewer)e.NameScope.Find("PART_ScrollViewer");
             ScrollViewer.Content = TextArea;
-
-            SearchPanel.Install(this);
         }
 
         /// <summary>
@@ -283,7 +351,7 @@ namespace AvaloniaEdit
         /// Gets the scroll viewer used by the text editor.
         /// This property can return null if the template has not been applied / does not contain a scroll viewer.
         /// </summary>
-        internal ScrollViewer ScrollViewer { get; private set; }
+        internal ScrollViewer? ScrollViewer { get; private set; }
 
         #endregion
 
@@ -304,14 +372,14 @@ namespace AvaloniaEdit
             set => SetValue(SyntaxHighlightingProperty, value);
         }
 
-        private IVisualLineTransformer _colorizer;
+        private IVisualLineTransformer? _colorizer;
 
         private static void OnSyntaxHighlightingChanged(AvaloniaPropertyChangedEventArgs e)
         {
             (e.Sender as TextEditor)?.OnSyntaxHighlightingChanged(e.NewValue as IHighlightingDefinition);
         }
 
-        private void OnSyntaxHighlightingChanged(IHighlightingDefinition newValue)
+        private void OnSyntaxHighlightingChanged(IHighlightingDefinition? newValue)
         {
             if (_colorizer != null)
             {
@@ -385,7 +453,7 @@ namespace AvaloniaEdit
         {
             if (e.Sender is TextEditor editor)
             {
-                if ((bool)e.NewValue)
+                if (e.NewValue is bool newVal && newVal)
                     editor.TextArea.ReadOnlySectionProvider = ReadOnlySectionDocument.Instance;
                 else
                     editor.TextArea.ReadOnlySectionProvider = NoReadOnlySections.Instance;
@@ -416,7 +484,7 @@ namespace AvaloniaEdit
             if (document != null)
             {
                 var undoStack = document.UndoStack;
-                if ((bool)e.NewValue)
+                if (e.NewValue is bool newVal && newVal)
                 {
                     if (undoStack.IsOriginalFile)
                         undoStack.DiscardOriginalFileMarker();
@@ -459,11 +527,10 @@ namespace AvaloniaEdit
 
         private static void OnShowLineNumbersChanged(AvaloniaPropertyChangedEventArgs e)
         {
-            var editor = e.Sender as TextEditor;
-            if (editor == null) return;
+            if (e.Sender is not TextEditor editor) return;
 
             var leftMargins = editor.TextArea.LeftMargins;
-            if ((bool)e.NewValue)
+            if (e.NewValue is bool newVal && newVal)
             {
                 var lineNumbers = new LineNumberMargin();
                 var line = (Line)DottedLineMargin.Create();
@@ -537,7 +604,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Copies the current selection to the clipboard.
         /// </summary>
-        public void Copy()
+        public virtual void Copy()
         {
             if (ApplicationCommands.Copy.CanExecute(null, TextArea))
             {
@@ -548,7 +615,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Removes the current selection and copies it to the clipboard.
         /// </summary>
-        public void Cut()
+        public virtual void Cut()
         {
             if (ApplicationCommands.Cut.CanExecute(null, TextArea))
             {
@@ -568,7 +635,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Removes the current selection without copying it to the clipboard.
         /// </summary>
-        public void Delete()
+        public virtual void Delete()
         {
             if(ApplicationCommands.Delete.CanExecute(null, TextArea))
             {
@@ -659,7 +726,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Pastes the clipboard content.
         /// </summary>
-        public void Paste()
+        public virtual void Paste()
         {
             if (ApplicationCommands.Paste.CanExecute(null, TextArea))
             {
@@ -671,7 +738,7 @@ namespace AvaloniaEdit
         /// Redoes the most recent undone command.
         /// </summary>
         /// <returns>True is the redo operation was successful, false is the redo stack is empty.</returns>
-        public bool Redo()
+        public virtual bool Redo()
         {
             if (CanRedo)
             {
@@ -734,7 +801,7 @@ namespace AvaloniaEdit
         /// Undoes the most recent command.
         /// </summary>
         /// <returns>True is the undo operation was successful, false is the undo stack is empty.</returns>
-        public bool Undo()
+        public virtual bool Undo()
         {
             if (CanUndo)
             {
@@ -747,7 +814,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Gets if the most recent undone command can be redone.
         /// </summary>
-        public bool CanRedo
+        public virtual bool CanRedo
         {
            get { return ApplicationCommands.Redo.CanExecute(null, TextArea); }
         }
@@ -755,7 +822,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Gets if the most recent command can be undone.
         /// </summary>
-        public bool CanUndo
+        public virtual bool CanUndo
         {
             get { return ApplicationCommands.Undo.CanExecute(null, TextArea); }
         }
@@ -1100,7 +1167,7 @@ namespace AvaloniaEdit
             if (Document == null)
                 return null;
             var textView = TextArea.TextView;
-            Point tpoint = (Point)this.TranslatePoint(point + new Point(textView.ScrollOffset.X, Math.Floor(textView.ScrollOffset.Y)), textView);
+            Point tpoint = this.TranslatePoint(point + new Point(textView.ScrollOffset.X, Math.Floor(textView.ScrollOffset.Y)), textView) ?? point;
             return textView.GetPosition(tpoint);
         }
 
@@ -1119,9 +1186,8 @@ namespace AvaloniaEdit
         /// </summary>
         public void ScrollTo(int line, int column)
         {
-            //const double MinimumScrollFraction = 0.3;
-            //ScrollTo(line, column, VisualYPosition.LineMiddle,
-            //    null != scrollViewer ? scrollViewer.ViewportHeight / 2 : 0.0, MinimumScrollFraction);
+            const double MinimumScrollFraction = 0.3;
+            ScrollTo(line, column, VisualYPosition.LineMiddle, null != textArea ? ((ILogicalScrollable)textArea).Viewport.Height / 2 : 0.0, MinimumScrollFraction);
         }
 
         /// <summary>
@@ -1136,16 +1202,16 @@ namespace AvaloniaEdit
         public void ScrollTo(int line, int column, VisualYPosition yPositionMode,
             double referencedVerticalViewPortOffset, double minimumScrollFraction)
         {
-            /*TextView textView = textArea.TextView;
+            TextView textView = textArea.TextView;
             TextDocument document = textView.Document;
-            if (scrollViewer != null && document != null)
+            if (textView != null && document != null)
             {
                 if (line < 1)
                     line = 1;
                 if (line > document.LineCount)
                     line = document.LineCount;
 
-                IScrollInfo scrollInfo = textView;
+                ILogicalScrollable scrollInfo = textView;
                 if (!scrollInfo.CanHorizontallyScroll)
                 {
                     // Word wrap is enabled. Ensure that we have up-to-date info about line height so that we scroll
@@ -1167,29 +1233,29 @@ namespace AvaloniaEdit
                 Point p = textArea.TextView.GetVisualPosition(new TextViewPosition(line, Math.Max(1, column)),
                     yPositionMode);
                 double verticalPos = p.Y - referencedVerticalViewPortOffset;
-                if (Math.Abs(verticalPos - scrollViewer.VerticalOffset) >
-                    minimumScrollFraction * scrollViewer.ViewportHeight)
+                if (Math.Abs(verticalPos - scrollInfo.Offset.Y) >
+                    minimumScrollFraction * scrollInfo.Viewport.Height)
                 {
-                    scrollViewer.ScrollToVerticalOffset(Math.Max(0, verticalPos));
+                    scrollInfo.Offset = scrollInfo.Offset.WithY(Math.Max(0, verticalPos));
                 }
 
                 if (column > 0)
                 {
-                    if (p.X > scrollViewer.ViewportWidth - Caret.MinimumDistanceToViewBorder * 2)
+                    if (p.X > scrollInfo.Viewport.Width - Caret.MinimumDistanceToViewBorder * 2)
                     {
-                        double horizontalPos = Math.Max(0, p.X - scrollViewer.ViewportWidth / 2);
-                        if (Math.Abs(horizontalPos - scrollViewer.HorizontalOffset) >
-                            minimumScrollFraction * scrollViewer.ViewportWidth)
+                        double horizontalPos = Math.Max(0, p.X - scrollInfo.Viewport.Width / 2);
+                        if (Math.Abs(horizontalPos - scrollInfo.Offset.X) >
+                            minimumScrollFraction * scrollInfo.Viewport.Width)
                         {
-                            scrollViewer.ScrollToHorizontalOffset(horizontalPos);
+                            scrollInfo.Offset = scrollInfo.Offset.WithX(horizontalPos);
                         }
                     }
                     else
                     {
-                        scrollViewer.ScrollToHorizontalOffset(0);
+                        scrollInfo.Offset = scrollInfo.Offset.WithX(0);
                     }
                 }
-            }*/
+            }
         }
     }
 }
