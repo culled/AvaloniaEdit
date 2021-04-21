@@ -28,7 +28,7 @@ using Avalonia.Input;
 
 namespace AvaloniaEdit.Editing
 {
-    internal enum CaretMovementType
+    public enum CaretMovementType
     {
         None,
         CharLeft,
@@ -46,7 +46,7 @@ namespace AvaloniaEdit.Editing
         DocumentEnd
     }
 
-    internal static class CaretNavigationCommandHandler
+    public static class CaretNavigationCommandHandler
     {
         /// <summary>
         /// Creates a new <see cref="TextAreaInputHandler"/> for the text area.
@@ -197,7 +197,7 @@ namespace AvaloniaEdit.Editing
             textArea.Caret.DesiredXPos = desiredXPos;
         }
 
-        internal static TextViewPosition GetNewCaretPosition(TextView textView, TextViewPosition caretPosition, CaretMovementType direction, bool enableVirtualSpace, ref double desiredXPos)
+        public static TextViewPosition GetNewCaretPosition(TextView textView, TextViewPosition caretPosition, CaretMovementType direction, bool enableVirtualSpace, ref double desiredXPos)
         {
             switch (direction)
             {

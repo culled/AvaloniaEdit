@@ -29,7 +29,7 @@ namespace AvaloniaEdit.Editing
     /// <summary>
     /// Handles selection of text using the mouse.
     /// </summary>
-    internal sealed class SelectionMouseHandler : ITextAreaInputHandler
+    public sealed class SelectionMouseHandler : ITextAreaInputHandler
     {
         #region enum SelectionMode
 
@@ -70,6 +70,7 @@ namespace AvaloniaEdit.Editing
         private SelectionMode _mode;
         private AnchorSegment _startWord;
         private Point _possibleDragStartMousePos;
+        private PointerPressedEventArgs _lastPressEventArgs;
 
         #region Constructor + Attach + Detach
         public SelectionMouseHandler(TextArea textArea)
@@ -86,6 +87,8 @@ namespace AvaloniaEdit.Editing
             TextArea.PointerReleased += TextArea_MouseLeftButtonUp;
             //textArea.QueryCursor += textArea_QueryCursor;
             TextArea.OptionChanged += TextArea_OptionChanged;
+			TextArea.Tapped += TextArea_Tapped;
+			TextArea.DoubleTapped += TextArea_DoubleTapped;
 
             _enableTextDragDrop = TextArea.Options.EnableTextDragDrop;
             if (_enableTextDragDrop)
@@ -94,12 +97,15 @@ namespace AvaloniaEdit.Editing
             }
         }
 
-        public void Detach()
+		public void Detach()
         {
             _mode = SelectionMode.None;
             TextArea.PointerPressed -= TextArea_MouseLeftButtonDown;
             TextArea.PointerMoved -= TextArea_MouseMove;
             TextArea.PointerReleased -= TextArea_MouseLeftButtonUp;
+            TextArea.DoubleTapped -= TextArea_DoubleTapped;
+            TextArea.Tapped -= TextArea_Tapped;
+
             //textArea.QueryCursor -= textArea_QueryCursor;
             TextArea.OptionChanged -= TextArea_OptionChanged;
             if (_enableTextDragDrop)
@@ -392,9 +398,9 @@ namespace AvaloniaEdit.Editing
 
         private void TextArea_MouseLeftButtonDown(object sender, PointerPressedEventArgs e)
         {
-            TextArea.Cursor = Cursor.Parse("IBeam");           
+            var pointer = e.GetCurrentPoint(TextArea);
 
-            var pointer = e.GetPointerPoint(TextArea);
+            TextArea.Cursor = Cursor.Parse("IBeam");
 
             _mode = SelectionMode.None;
             if (!e.Handled)
@@ -417,10 +423,11 @@ namespace AvaloniaEdit.Editing
                 }
 
                 var oldPosition = TextArea.Caret.Position;
-                SetCaretOffsetToMousePosition(e);
 
+                if(pointer.Properties.IsLeftButtonPressed || TextArea.Selection is not RectangleSelection)
+                    SetCaretOffsetToMousePosition(e);
 
-                if (!shift)
+                if (!shift && !pointer.Properties.IsRightButtonPressed)
                 {
                     TextArea.ClearSelection();
                 }
@@ -451,7 +458,7 @@ namespace AvaloniaEdit.Editing
                             TextArea.Selection = TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, TextArea.Caret.Position);
                         }
                     }
-                    else
+                    else if(pointer.Properties.IsLeftButtonPressed)
                     {
                         SimpleSegment startWord;
 
@@ -496,15 +503,19 @@ namespace AvaloniaEdit.Editing
                 }
 				e.Handled = true;
 			}
-		}
+        }
         #endregion
 
         #region LeftButtonClick
-
+        private void TextArea_Tapped(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+        }
         #endregion
 
         #region LeftButtonDoubleTap
-
+        private void TextArea_DoubleTapped(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+        }
         #endregion
 
         #region Mouse Position <-> Text coordinates
@@ -699,11 +710,12 @@ namespace AvaloniaEdit.Editing
 
         #region MouseLeftButtonUp
 
-        private void TextArea_MouseLeftButtonUp(object sender, PointerEventArgs e)
+        private void TextArea_MouseLeftButtonUp(object sender, PointerReleasedEventArgs e)
         {
-            if (_mode == SelectionMode.None || e.Handled)
+            if (_mode == SelectionMode.None || e.Handled || e.InitialPressMouseButton == MouseButton.Right)
                 return;
             e.Handled = true;
+
             switch (_mode)
             {
                 case SelectionMode.PossibleDragStart:

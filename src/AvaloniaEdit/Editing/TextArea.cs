@@ -115,6 +115,12 @@ namespace AvaloniaEdit.Editing
 
             if (e.NameScope.Find("PART_CP") is ContentPresenter contentPresenter)
             {
+                //If the parent view is reloaded, a new content parent will be created, so we must first disconnect from the previous parent
+                if (TextView.Parent is ContentPresenter parentPresenter)
+				{
+                    parentPresenter.Content = null;
+				}
+
                 contentPresenter.Content = TextView;
             }
         }
@@ -849,7 +855,7 @@ namespace AvaloniaEdit.Editing
             }
         }
 
-        internal void RemoveSelectedText()
+        public void RemoveSelectedText()
         {
             if (Document == null)
                 throw ThrowUtil.NoDocumentAssigned();
@@ -865,7 +871,7 @@ namespace AvaloniaEdit.Editing
 #endif
         }
 
-        internal void ReplaceSelectionWithText(string newText)
+        public void ReplaceSelectionWithText(string newText)
         {
             if (newText == null)
                 throw new ArgumentNullException(nameof(newText));
@@ -874,7 +880,7 @@ namespace AvaloniaEdit.Editing
             _selection.ReplaceSelectionWithText(newText);
         }
 
-        internal ISegment[] GetDeletableSegments(ISegment segment)
+        public ISegment[] GetDeletableSegments(ISegment segment)
         {
             var deletableSegments = ReadOnlySectionProvider.GetDeletableSegments(segment);
             if (deletableSegments == null)
@@ -1038,7 +1044,7 @@ namespace AvaloniaEdit.Editing
             remove { if (_logicalScrollable != null) _logicalScrollable.ScrollInvalidated -= value; }
         }
 
-        internal void OnTextCopied(TextEventArgs e)
+        public void OnTextCopied(TextEventArgs e)
         {
             TextCopied?.Invoke(this, e);
         }
@@ -1101,6 +1107,58 @@ namespace AvaloniaEdit.Editing
         {
             _logicalScrollable?.RaiseScrollInvalidated(e);
         }
+
+        #region Zooming
+        public static readonly DirectProperty<TextArea, double> ZoomProperty =
+                AvaloniaProperty.RegisterDirect<TextArea, double>(nameof(Zoom), e => e.Zoom, (e, z) => e.Zoom = z);
+
+        /*public double Zoom
+        {
+            get => GetValue(ZoomProperty);
+            set
+            {
+                SetValue(ZoomProperty, value);
+
+                var scaleTransform = RenderTransform as ScaleTransform ?? new ScaleTransform(1, 1);
+
+                scaleTransform.ScaleX = value;
+                scaleTransform.ScaleY = value;
+
+                RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+                RenderTransform = scaleTransform;
+
+                var parentBounds = Parent.Bounds;
+
+                Height = parentBounds.Height / value;
+                Width = parentBounds.Width / value;
+            }
+        }*/
+
+        private double _zoom = 1;
+        public double Zoom
+		{
+            get => _zoom;
+            set
+            {
+                SetAndRaise(ZoomProperty, ref _zoom, value);
+
+                if (Parent == null) return;
+
+                var scaleTransform = RenderTransform as ScaleTransform ?? new ScaleTransform(1, 1);
+
+                scaleTransform.ScaleX = value;
+                scaleTransform.ScaleY = value;
+
+                RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+                RenderTransform = scaleTransform;
+
+                var parentBounds = Parent.Bounds;
+
+                Height = parentBounds.Height / value;
+                Width = parentBounds.Width / value;
+            }
+		}
+        #endregion
     }
 
     /// <summary>
@@ -1120,5 +1178,5 @@ namespace AvaloniaEdit.Editing
         {
             Text = text ?? throw new ArgumentNullException(nameof(text));
         }
-    }
+    } 
 }

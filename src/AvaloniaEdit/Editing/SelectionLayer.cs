@@ -34,6 +34,9 @@ namespace AvaloniaEdit.Editing
 
             TextViewWeakEventManager.VisualLinesChanged.AddHandler(TextView, ReceiveWeakEvent);
             TextViewWeakEventManager.ScrollOffsetChanged.AddHandler(TextView, ReceiveWeakEvent);
+
+            //Makes the selection show up behind the text
+            ZIndex = -1;
         }
 
         private void ReceiveWeakEvent(object sender, EventArgs e)
