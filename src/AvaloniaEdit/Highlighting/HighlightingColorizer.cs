@@ -254,7 +254,7 @@ namespace AvaloniaEdit.Highlighting
             ApplyColorToElement(element, color, CurrentContext);
         }
 
-        internal static void ApplyColorToElement(VisualLineElement element, HighlightingColor color, ITextRunConstructionContext context)
+        public static void ApplyColorToElement(VisualLineElement element, HighlightingColor color, ITextRunConstructionContext context)
         {
             if (color.Foreground != null)
             {
