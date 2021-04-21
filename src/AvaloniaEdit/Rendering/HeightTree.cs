@@ -488,6 +488,7 @@ namespace AvaloniaEdit.Rendering
 
         private HeightTreeNode GetNodeByVisualPosition(double position)
         {
+            position = Math.Max(0, position -_document.TopPadding);
             var node = _root;
             while (true)
             {
@@ -529,9 +530,9 @@ namespace AvaloniaEdit.Rendering
             }
         }
 
-        private static double GetVisualPositionFromNode(HeightTreeNode node)
+        private double GetVisualPositionFromNode(HeightTreeNode node)
         {
-            var position = node.Left?.TotalHeight ?? 0;
+            var position = (node.Left?.TotalHeight ?? 0) + _document.TopPadding;
             while (node.Parent != null)
             {
                 if (node.IsDirectlyCollapsed)
@@ -607,7 +608,7 @@ namespace AvaloniaEdit.Rendering
         #region LineCount & TotalHeight
         public int LineCount => _root.TotalCount;
 
-        public double TotalHeight => _root.TotalHeight;
+        public double TotalHeight => _root.TotalHeight + _document.TopPadding + _document.BottomPadding;
 
         #endregion
 

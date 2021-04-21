@@ -116,6 +116,33 @@ namespace AvaloniaEdit.Rendering
 
         internal double FontSize => GetValue(TextBlock.FontSizeProperty);
 
+        public static readonly StyledProperty<Thickness> DefaultLineMarginProperty =
+            AvaloniaProperty.Register<TextView, Thickness>(nameof(DefaultLineMargin));
+
+        public Thickness DefaultLineMargin
+		{
+            get => GetValue(DefaultLineMarginProperty);
+            set => SetValue(DefaultLineMarginProperty, value);
+		}
+
+        public static readonly StyledProperty<double> DefaultLineSpacingProperty =
+            AvaloniaProperty.Register<TextView, double>(nameof(DefaultLineSpacing));
+
+        public double DefaultLineSpacing
+		{
+            get => GetValue(DefaultLineSpacingProperty);
+            set => SetValue(DefaultLineSpacingProperty, value);
+		}
+
+        public static readonly StyledProperty<bool> WordWrapProperty =
+            AvaloniaProperty.Register<TextView, bool>(nameof(WordWrap));
+
+        public bool WordWrap
+        {
+            get => GetValue(WordWrapProperty);
+            set => SetValue(WordWrapProperty, value);
+        }
+
         /// <summary>
         /// Occurs when the document property has changed.
         /// </summary>
@@ -914,7 +941,7 @@ namespace AvaloniaEdit.Rendering
             if (availableSize.Width > 32000)
                 availableSize = new Size(32000, availableSize.Height);
 
-            if (!_canHorizontallyScroll && !availableSize.Width.IsClose(_lastAvailableSize.Width))
+            if (!availableSize.Width.IsClose(_lastAvailableSize.Width))
                 ClearVisualLines();
             _lastAvailableSize = availableSize;
 
@@ -971,7 +998,7 @@ namespace AvaloniaEdit.Rendering
             TextLayer.SetVisualLines(_visibleVisualLines);
 
             // Size of control (scorll viewport) might be changed during ArrageOverride. We only need document size for now.
-            _documentSize = new Size(maxWidth, heightTreeHeight);
+            _documentSize = new Size(Document.PreferredWidth ?? availableSize.Width, heightTreeHeight);
 
             VisualLinesChanged?.Invoke(this, EventArgs.Empty);
 
@@ -992,8 +1019,6 @@ namespace AvaloniaEdit.Rendering
 
             // number of pixels clipped from the first visual line(s)
             _clippedPixelsOnTop = _scrollOffset.Y - _heightTree.GetVisualPosition(firstLineInView);
-            // clippedPixelsOnTop should be >= 0, except for floating point inaccurracy.
-            Debug.Assert(_clippedPixelsOnTop >= -ExtensionMethods.Epsilon);
 
             _newVisualLines = new List<VisualLine>();
 
@@ -1061,7 +1086,9 @@ namespace AvaloniaEdit.Rendering
                 FontSize = FontSize,
                 Typeface = new Typeface(TextBlock.GetFontFamily(this), TextBlock.GetFontStyle(this), TextBlock.GetFontWeight(this)),
                 ForegroundBrush = TextBlock.GetForeground(this),
-                CultureInfo = CultureInfo.CurrentCulture
+                CultureInfo = CultureInfo.CurrentCulture,
+                Margin = DefaultLineMargin,
+                LineSpacing = DefaultLineSpacing
             };
             return properties;
         }
@@ -1071,7 +1098,7 @@ namespace AvaloniaEdit.Rendering
             return new TextParagraphProperties
             {
                 DefaultTextRunProperties = defaultTextRunProperties,
-                TextWrapping = _canHorizontallyScroll ? TextWrapping.NoWrap : TextWrapping.Wrap,
+                TextWrapping = WordWrap ? TextWrapping.Wrap : TextWrapping.NoWrap,
                 DefaultIncrementalTab = Options.IndentationSize * WideSpaceWidth
             };
         }
@@ -1119,12 +1146,18 @@ namespace AvaloniaEdit.Rendering
             var textLines = new List<TextLine>();
             paragraphProperties.Indent = 0;
             paragraphProperties.FirstLineInParagraph = true;
+            paragraphProperties.LineSpacing = 0;
+            paragraphProperties.Margin = new Thickness(documentLine.Margin.HasValue ? documentLine.Margin.Value.Left : globalTextRunProperties.Margin.Left,
+                documentLine.Margin.HasValue ? documentLine.Margin.Value.Top : globalTextRunProperties.Margin.Top,
+                documentLine.Margin.HasValue ? documentLine.Margin.Value.Right : globalTextRunProperties.Margin.Right,
+                documentLine.Margin.HasValue ? documentLine.Margin.Value.Bottom : globalTextRunProperties.Margin.Bottom);
+
             while (textOffset <= visualLine.VisualLengthWithEndOfLineMarker)
             {
                 var textLine = _formatter.FormatLine(
                     textSource,
                     textOffset,
-                    availableSize.Width,
+                    (Document.PreferredWidth ?? availableSize.Width) - WideSpaceWidth,
                     paragraphProperties
                 );
                 textLines.Add(textLine);
@@ -1137,6 +1170,11 @@ namespace AvaloniaEdit.Rendering
                 if (paragraphProperties.FirstLineInParagraph)
                 {
                     paragraphProperties.FirstLineInParagraph = false;
+                    paragraphProperties.LineSpacing = documentLine.LineSpacing ?? globalTextRunProperties.LineSpacing;
+                    paragraphProperties.Margin = new Thickness(documentLine.Margin.HasValue ? documentLine.Margin.Value.Left : globalTextRunProperties.Margin.Left,
+                        0,
+                        documentLine.Margin.HasValue ? documentLine.Margin.Value.Right : globalTextRunProperties.Margin.Right,
+                        documentLine.Margin.HasValue ? documentLine.Margin.Value.Bottom : globalTextRunProperties.Margin.Bottom);
 
                     var options = Options;
                     double indentation = 0;
@@ -1190,28 +1228,38 @@ namespace AvaloniaEdit.Rendering
         {
             EnsureVisualLines();
 
-            foreach (var layer in Layers)
-            {
-                layer.Arrange(new Rect(new Point(0, 0), finalSize));
-            }
-
             if (_document == null || _allVisualLines.Count == 0)
                 return finalSize;
 
             // validate scroll position
-            var newScrollOffsetX = _scrollOffset.X;
+            var newScrollOffsetX = _scrollOffset.X + _centerOffset;
             var newScrollOffsetY = _scrollOffset.Y;
-            if (_scrollOffset.X + finalSize.Width > _documentSize.Width)
+            /*if (_scrollOffset.X + finalSize.Width > _documentSize.Width)
             {
                 newScrollOffsetX = Math.Max(0, _documentSize.Width - finalSize.Width);
             }
             if (_scrollOffset.Y + finalSize.Height > _documentSize.Height)
             {
                 newScrollOffsetY = Math.Max(0, _documentSize.Height - finalSize.Height);
+            }*/
+
+            if (Document.PreferredWidth.HasValue)
+            {
+                _centerOffset = Math.Max((finalSize.Width - Document.PreferredWidth.Value) / 2, 0);
+            }
+            else
+            {
+                _centerOffset = 0;
             }
 
             // Apply final view port and offset
             SetScrollData(finalSize, _documentSize, new Vector(newScrollOffsetX, newScrollOffsetY));
+
+            //We should arrange the layers after we've figured out the scroll viewport
+            foreach (var layer in Layers)
+            {
+                layer.Arrange(new Rect(new Point(0, 0), finalSize));
+            }
 
             if (_visibleVisualLines != null)
             {
@@ -1327,8 +1375,18 @@ namespace AvaloniaEdit.Rendering
 
         internal void RenderBackground(DrawingContext drawingContext, KnownLayer layer)
         {
+            var bounds = new Rect(Bounds.X + _centerOffset, Bounds.Y, _documentSize.Width, _scrollViewport.Height);
+
             // this is necessary so hit-testing works properly and events get tunneled to the TextView.
-            drawingContext.FillRectangle(Brushes.Transparent, Bounds);
+            if (layer == KnownLayer.Background)
+            {
+                drawingContext.FillRectangle(Document.BackgroundBrush, bounds);
+            }
+            else
+            {
+                drawingContext.FillRectangle(Brushes.Transparent, bounds);
+            }
+
             foreach (var bg in _backgroundRenderers)
             {
                 if (bg.Layer == layer)
@@ -1381,6 +1439,8 @@ namespace AvaloniaEdit.Rendering
 
         private bool SetScrollData(Size viewport, Size extent, Vector offset)
         {
+            offset = offset.WithX(offset.X - _centerOffset);
+
             if (!(viewport.IsClose(_scrollViewport)
                   && extent.IsClose(_scrollExtent)
                   && offset.IsClose(_scrollOffset)))
@@ -1403,6 +1463,8 @@ namespace AvaloniaEdit.Rendering
         private bool _canVerticallyScroll = true;
 
         private bool _canHorizontallyScroll = true;
+
+        private double _centerOffset;
 
         /// <summary>
         /// Gets the horizontal scroll offset.
@@ -1546,7 +1608,8 @@ namespace AvaloniaEdit.Rendering
         {
             var visibleRectangle = new Rect(_scrollOffset.X, _scrollOffset.Y,
                                              _scrollViewport.Width, _scrollViewport.Height);
-            var newScrollOffsetX = _scrollOffset.X;
+
+            var newScrollOffsetX = _scrollOffset.X + _centerOffset;
             var newScrollOffsetY = _scrollOffset.Y;
             if (rectangle.X < visibleRectangle.X)
             {
@@ -1578,14 +1641,14 @@ namespace AvaloniaEdit.Rendering
             {
                 newScrollOffsetY = rectangle.Bottom - _scrollViewport.Height;
             }
-            newScrollOffsetX = ValidateVisualOffset(newScrollOffsetX);
+            newScrollOffsetX = ValidateVisualOffset(newScrollOffsetX) - _centerOffset;
             newScrollOffsetY = ValidateVisualOffset(newScrollOffsetY);
             var newScrollOffset = new Vector(newScrollOffsetX, newScrollOffsetY);
             if (!_scrollOffset.IsClose(newScrollOffset))
             {
                 SetScrollOffset(newScrollOffset);
                 OnScrollChange();
-                InvalidateMeasure(DispatcherPriority.Normal);
+                //InvalidateMeasure(DispatcherPriority.Normal);
             }
         }
         #endregion
@@ -1700,6 +1763,7 @@ namespace AvaloniaEdit.Rendering
         private VisualLineElement GetVisualLineElementFromPosition(Point visualPosition)
         {
             var vl = GetVisualLineFromVisualTop(visualPosition.Y);
+
             if (vl != null)
             {
                 var column = vl.GetVisualColumnFloor(visualPosition);
@@ -2104,7 +2168,7 @@ namespace AvaloniaEdit.Rendering
             get => _scrollOffset;
             set
             {
-                value = new Vector(ValidateVisualOffset(value.X), ValidateVisualOffset(value.Y));
+                value = new Vector(ValidateVisualOffset(value.X) - _centerOffset, ValidateVisualOffset(value.Y));
                 var isX = !_scrollOffset.X.IsClose(value.X);
                 var isY = !_scrollOffset.Y.IsClose(value.Y);
                 if (isX || isY)

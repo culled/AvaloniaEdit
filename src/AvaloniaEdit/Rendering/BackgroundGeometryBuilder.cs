@@ -25,6 +25,7 @@ using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using AvaloniaEdit.Utils;
 using Avalonia.Media;
+using Avalonia.Controls.Primitives;
 
 namespace AvaloniaEdit.Rendering
 {
@@ -190,10 +191,10 @@ namespace AvaloniaEdit.Rendering
                 var visualStartCol = visualLine.GetTextLineVisualStartColumn(line);
                 var visualEndCol = visualStartCol + line.Length;
                 if (line == lastTextLine)
-                    visualEndCol -= 1; // 1 position for the TextEndOfParagraph
-                                       // TODO: ?
-                                       //else
-                                       //	visualEndCol -= line.TrailingWhitespaceLength;
+                    visualEndCol -= 1;                              // 1 position for the TextEndOfParagraph
+                else                                                // TODO: ?
+                    visualEndCol -= line.TrailingWhitespaceLength;  //else
+                                                                    //	visualEndCol -= line.TrailingWhitespaceLength;
 
                 if (segmentEndVc < visualStartCol)
                     break;
@@ -252,15 +253,15 @@ namespace AvaloniaEdit.Rendering
                         left = line == lastTextLine ? line.WidthIncludingTrailingWhitespace : line.Width;
                     }
                     // TODO: !!!!!!!!!!!!!!!!!! SCROLL !!!!!!!!!!!!!!!!!!
-                    //if (line != lastTextLine || segmentEndVC == int.MaxValue) {
+                    if (line != lastTextLine || segmentEndVc == int.MaxValue) {
                     //	// If word-wrap is enabled and the segment continues into the next line,
                     //	// or if the extendToFullWidthAtLineEnd option is used (segmentEndVC == int.MaxValue),
                     //	// we select the full width of the viewport.
-                    //	right = Math.Max(((IScrollInfo)textView).ExtentWidth, ((IScrollInfo)textView).ViewportWidth);
-                    //} else {
+                        right = Math.Max(((ILogicalScrollable)textView).Extent.Width, ((ILogicalScrollable)textView).Viewport.Width);
+                    } else {
 
-                    right = visualLine.GetTextLineVisualXPosition(lastTextLine, segmentEndVc);
-                    //}
+                        right = visualLine.GetTextLineVisualXPosition(lastTextLine, segmentEndVc);
+                    }
                     var extendSelection = new Rect(Math.Min(left, right), y, Math.Abs(right - left), line.Height);
                     if (!lastRect.IsEmpty)
                     {

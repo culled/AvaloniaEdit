@@ -157,7 +157,6 @@ namespace AvaloniaEdit.Rendering
             }
             else
             {
-                //origin.Y -= element.textLine.Baseline;
                 Element.TextLine.Draw(drawingContext, origin);
             }
         }

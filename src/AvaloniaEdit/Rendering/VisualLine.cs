@@ -285,9 +285,12 @@ namespace AvaloniaEdit.Rendering
         internal void SetTextLines(List<TextLine> textLines)
         {
             _textLines = new ReadOnlyCollection<TextLine>(textLines);
+            
             Height = 0;
             foreach (var line in textLines)
+            {
                 Height += line.Height;
+            }
         }
 
         /// <summary>
