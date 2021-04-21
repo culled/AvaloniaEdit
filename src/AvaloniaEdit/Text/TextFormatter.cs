@@ -2,9 +2,9 @@
 {
     public class TextFormatter
     {
-        public TextLine FormatLine(TextSource textSource, int firstCharIndex, double paragraphWidth, TextParagraphProperties paragraphProperties)
+        public TextLine FormatLine(TextSource textSource, int firstCharIndex, double availableWidth, TextParagraphProperties paragraphProperties)
         {
-            return TextLineImpl.Create(paragraphProperties, firstCharIndex, (int)paragraphWidth, textSource);
+            return TextLineImpl.Create(paragraphProperties, firstCharIndex, availableWidth, textSource);
         }
     }
 }

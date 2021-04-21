@@ -1,4 +1,5 @@
-﻿using Avalonia.Media;
+﻿using Avalonia;
+using Avalonia.Media;
 
 namespace AvaloniaEdit.Text
 {
@@ -13,5 +14,9 @@ namespace AvaloniaEdit.Text
         public TextWrapping TextWrapping { get; set; }
 
         public double Indent { get; set; }
+
+        public Thickness Margin { get; set; }
+
+        public double LineSpacing { get; set; }
     }
 }

@@ -26,12 +26,18 @@ namespace AvaloniaEdit.Text
         public override double Height { get; }
 
         public override double Baseline { get; }
+		public override double LeftMarginOffset { get; }
 
-        internal static TextLineImpl Create(TextParagraphProperties paragraphProperties, int firstIndex, int paragraphLength, TextSource textSource)
+		internal static TextLineImpl Create(TextParagraphProperties paragraphProperties, int firstIndex, double availableWidth, TextSource textSource)
         {
             var index = firstIndex;
             var visibleLength = 0;
-            var widthLeft = paragraphProperties.TextWrapping == TextWrapping.Wrap && paragraphLength > 0 ? paragraphLength : double.MaxValue;
+            var widthLeft = paragraphProperties.TextWrapping == TextWrapping.Wrap && availableWidth > 0 ? availableWidth : double.MaxValue;
+
+            widthLeft -= paragraphProperties.Margin.Left + paragraphProperties.Margin.Right;
+
+            if (widthLeft < paragraphProperties.DefaultTextRunProperties.FontSize) widthLeft = paragraphProperties.DefaultTextRunProperties.FontSize;
+
             TextLineRun prevRun = null;
             var run = TextLineRun.Create(textSource, index, firstIndex, widthLeft);
             if (!run.IsEnd && run.Width <= widthLeft)
@@ -61,6 +67,12 @@ namespace AvaloniaEdit.Text
                 widthLeft -= run.Width;
                 if (run.IsEnd || widthLeft <= 0)
                 {
+                    if (!run.IsEnd && widthLeft <= 0)
+                    {
+                        //The text needs to be wrapped
+                        CalculateLineBreak(runs);
+                    }
+
                     trailing.SpaceWidth = 0;
                     UpdateTrailingInfo(runs, trailing);
                     return new TextLineImpl(paragraphProperties, firstIndex, runs, trailing);
@@ -99,19 +111,26 @@ namespace AvaloniaEdit.Text
                 WidthIncludingTrailingWhitespace += run.Width;
             }
 
-            Height = Math.Max(height, Baseline + top);
-
-            if (Height <= 0)
+            if (height <= 0)
             {
                 var fontSize = paragraphProperties.DefaultTextRunProperties.FontSize;
 
-                Height = fontSize * TextLineRun.HeightFactor;
-                Baseline = fontSize * TextLineRun.BaselineFactor;
+                Height = fontSize * TextLineRun.HeightFactor + paragraphProperties.Margin.Top + paragraphProperties.LineSpacing;
+                Baseline = fontSize * TextLineRun.BaselineFactor + paragraphProperties.Margin.Top + paragraphProperties.LineSpacing;
             }
+            else
+			{
+                Baseline += paragraphProperties.Margin.Top + paragraphProperties.LineSpacing;
+                Height = Math.Max(height, Baseline + top);
+            }
+
+            if(runs[^1].IsEnd)
+                Height += paragraphProperties.Margin.Bottom;
 
             FirstIndex = firstIndex;
             TrailingWhitespaceLength = trailing.Count;
             Width = WidthIncludingTrailingWhitespace - trailing.SpaceWidth;
+            LeftMarginOffset = paragraphProperties.Margin.Left;
         }
 
         private static void UpdateTrailingInfo(List<TextLineRun> runs, TrailingInfo trailing)
@@ -122,6 +141,37 @@ namespace AvaloniaEdit.Text
                 if (!runs[index].UpdateTrailingInfo(trailing))
                 {
                     return;
+                }
+            }
+        }
+
+        private static void CalculateLineBreak(List<TextLineRun> runs)
+		{
+            TextLineRun runToSplit;
+            int ri = runs.Count - 1;
+            int lastWhitespaceIndex;
+
+            //Find the run that contains the whitespace we'll wrap at
+            do
+            {
+                runToSplit = runs[ri];
+                lastWhitespaceIndex = runToSplit.LastWhitespaceIndex;
+                ri--;
+            } while (ri >= 0 && lastWhitespaceIndex == -1);
+
+            if (lastWhitespaceIndex > -1)
+            {
+                if (runToSplit.Length != 1)
+                {
+                    //Make the last run have a length up to and including the whitespace
+                    runToSplit.TrimEnd(runToSplit.Length - (lastWhitespaceIndex + 1));
+                }
+
+                //Remove all runs after this one so they start on the next line
+                if (ri < runs.Count - 2)
+                {
+                    ri+=2;
+                    runs.RemoveRange(ri, runs.Count - ri);
                 }
             }
         }
@@ -150,18 +200,19 @@ namespace AvaloniaEdit.Text
             }
 
             double width = 0;
-            var y = origin.Y;
+            var y = origin.Y + Baseline;
+            var x = origin.X + LeftMarginOffset;
 
             foreach (var run in _runs)
             {
-                run.Draw(drawingContext, width + origin.X, y);
+                run.Draw(drawingContext, width + x, y);
                 width += run.Width;
             }
         }
 
         public override double GetDistanceFromCharacter(int firstIndex, int trailingLength)
         {
-            double distance = 0;
+            double distance = LeftMarginOffset;
             var index = firstIndex + (trailingLength != 0 ? 1 : 0) - FirstIndex;
             var runs = _runs;
             foreach (var run in runs)
@@ -180,6 +231,7 @@ namespace AvaloniaEdit.Text
 
         public override (int firstIndex, int trailingLength) GetCharacterFromDistance(double distance)
         {
+            distance -= LeftMarginOffset;
             var firstIndex = FirstIndex;
             if (distance < 0)
             {

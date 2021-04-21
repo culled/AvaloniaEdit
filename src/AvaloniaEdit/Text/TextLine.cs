@@ -13,6 +13,7 @@ namespace AvaloniaEdit.Text
         public abstract double WidthIncludingTrailingWhitespace { get; }
         public abstract double Height { get; }
         public abstract double Baseline { get; }
+        public abstract double LeftMarginOffset { get; }
         public abstract void Draw(DrawingContext drawingContext, Point origin);
         public abstract double GetDistanceFromCharacter(int firstIndex, int trailingLength);
         public abstract (int firstIndex, int trailingLength) GetCharacterFromDistance(double distance);

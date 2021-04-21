@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Avalonia;
 using Avalonia.Media;
 
 namespace AvaloniaEdit.Text
@@ -11,7 +12,9 @@ namespace AvaloniaEdit.Text
             CultureInfo = CultureInfo,
             ForegroundBrush = ForegroundBrush,
             Typeface = Typeface,
-            FontSize = FontSize
+            FontSize = FontSize,
+            Margin = Margin,
+            LineSpacing = LineSpacing
         };
 
         public IBrush BackgroundBrush { get; set; }
@@ -23,5 +26,8 @@ namespace AvaloniaEdit.Text
         public Typeface Typeface { get; set; }
 
         public double FontSize { get; set; }
+
+        public Thickness Margin { get; set; }
+        public double LineSpacing { get; set; }
     }
 }

@@ -18,6 +18,8 @@ namespace AvaloniaEdit.Text
 
         public int Length { get; set; }
 
+        public int LastWhitespaceIndex { get; set; }
+
         public double Width { get; private set; }
 
         public TextRun TextRun { get; private set; }
@@ -155,21 +157,47 @@ namespace AvaloniaEdit.Text
 
         internal static TextLineRun CreateRunForText(StringRange stringRange, TextRun textRun, double widthLeft, bool emergencyWrap, bool breakOnTabs)
         {
-            var run = new TextLineRun
-            {
-                StringRange = stringRange,
-                TextRun = textRun,
-                Length = textRun.Length
-            };
-
-            var tf = run.Typeface;
+            var tf = textRun.Properties.Typeface;
             var formattedText = new FormattedText
             {
                 Text = stringRange.ToString(),
                 Typeface = new Typeface(tf.FontFamily, tf.Style, tf.Weight),
-                FontSize = run.FontSize
+                FontSize = textRun.Properties.FontSize
             };
-       
+
+            double x = 0;
+            int offset = 0;
+            int lastWhitespaceIndex = -1;
+
+            //Measure the width of the text that would fit in the space left
+            while (x <= widthLeft && offset < textRun.Length)
+            {
+                x += formattedText.HitTestTextPosition(offset).Width;
+
+                if (x <= widthLeft)
+                {
+                    if (char.IsWhiteSpace(stringRange[offset]))
+                    {
+                        lastWhitespaceIndex = offset;
+                    }
+
+                    offset++;
+                }
+            }
+
+            //Wrap at the last letter if there was no whitespace in the run
+            if(lastWhitespaceIndex == -1 && x > widthLeft)
+			{
+                lastWhitespaceIndex = offset;
+            }
+
+            var run = new TextLineRun
+            {
+                StringRange = stringRange,
+                TextRun = textRun,
+                Length = textRun.Length,
+                LastWhitespaceIndex = lastWhitespaceIndex
+            };
 
             run._formattedText = formattedText;
 
@@ -307,6 +335,23 @@ namespace AvaloniaEdit.Text
         private static bool IsSpace(char ch)
         {
             return ch == ' ' || ch == '\u00a0';
+        }
+
+        public void TrimEnd(int trimLength)
+		{
+            Length = Math.Max(Length - trimLength, 1);
+            StringRange = new StringRange(StringRange.ToString(), 0, Length);
+            _formattedText = new FormattedText()
+            {
+                Text = StringRange.ToString(),
+                Typeface = _formattedText.Typeface,
+                FontSize = _formattedText.FontSize
+            };
+
+            var size = _formattedText.Bounds.Size;
+            _formattedTextSize = size;
+
+            Width = size.Width;
         }
     }
 }
