@@ -27,7 +27,10 @@ using System.IO;
 using AvaloniaEdit.Utils;
 using Avalonia.Threading;
 using System.Threading;
+using Avalonia;
+using Avalonia.Media;
 
+#nullable enable
 namespace AvaloniaEdit.Document
 {
     /// <summary>
@@ -213,7 +216,7 @@ namespace AvaloniaEdit.Document
             return _rope[offset];
         }
 
-        private WeakReference _cachedText;
+        private WeakReference? _cachedText;
 
         /// <summary>
         /// Gets/Sets the text of the whole document.
@@ -244,7 +247,7 @@ namespace AvaloniaEdit.Document
         /// This event is called after a group of changes is completed.
         /// </summary>
         /// <remarks><inheritdoc cref="Changing"/></remarks>
-        public event EventHandler TextChanged;
+        public event EventHandler? TextChanged;
 
         event EventHandler IDocument.ChangeCompleted
         {
@@ -266,7 +269,7 @@ namespace AvaloniaEdit.Document
         /// Is raised when the TextLength property changes.
         /// </summary>
         /// <remarks><inheritdoc cref="Changing"/></remarks>
-        public event EventHandler TextLengthChanged;
+        public event EventHandler? TextLengthChanged;
 
         /// <summary>
         /// Is raised before the document changes.
@@ -305,10 +308,10 @@ namespace AvaloniaEdit.Document
         /// The <see cref="UndoStack"/> listens to the <c>UpdateStarted</c> and <c>UpdateFinished</c> events to group all changes into a single undo step.
         /// </para>
         /// </remarks>
-        public event EventHandler<DocumentChangeEventArgs> Changing;
+        public event EventHandler<DocumentChangeEventArgs>? Changing;
 
         // Unfortunately EventHandler<T> is invariant, so we have to use two separate events
-        private event EventHandler<TextChangeEventArgs> TextChangingInternal;
+        private event EventHandler<TextChangeEventArgs>? TextChangingInternal;
 
         event EventHandler<TextChangeEventArgs> IDocument.TextChanging
         {
@@ -320,9 +323,9 @@ namespace AvaloniaEdit.Document
         /// Is raised after the document has changed.
         /// </summary>
         /// <remarks><inheritdoc cref="Changing"/></remarks>
-        public event EventHandler<DocumentChangeEventArgs> Changed;
+        public event EventHandler<DocumentChangeEventArgs>? Changed;
 
-        private event EventHandler<TextChangeEventArgs> TextChangedInternal;
+        private event EventHandler<TextChangeEventArgs>? TextChangedInternal;
 
         event EventHandler<TextChangeEventArgs> IDocument.TextChanged
         {
@@ -402,7 +405,7 @@ namespace AvaloniaEdit.Document
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         #endregion
 
@@ -485,13 +488,13 @@ namespace AvaloniaEdit.Document
         /// Occurs when a document change starts.
         /// </summary>
         /// <remarks><inheritdoc cref="Changing"/></remarks>
-        public event EventHandler UpdateStarted;
+        public event EventHandler? UpdateStarted;
 
         /// <summary>
         /// Occurs when a document change is finished.
         /// </summary>
         /// <remarks><inheritdoc cref="Changing"/></remarks>
-        public event EventHandler UpdateFinished;
+        public event EventHandler? UpdateFinished;
 
         void IDocument.StartUndoableAction()
         {
@@ -801,7 +804,7 @@ namespace AvaloniaEdit.Document
         /// Passing an OffsetChangeMap to the Replace method will automatically freeze it to ensure the thread safety of the resulting
         /// DocumentChangeEventArgs instance.
         /// </param>
-        public void Replace(int offset, int length, ITextSource text, OffsetChangeMap offsetChangeMap)
+        public void Replace(int offset, int length, ITextSource text, OffsetChangeMap? offsetChangeMap)
         {
             text = text?.CreateSnapshot() ?? throw new ArgumentNullException(nameof(text));
             offsetChangeMap?.Freeze();
@@ -832,7 +835,7 @@ namespace AvaloniaEdit.Document
             }
         }
 
-        private void DoReplace(int offset, int length, ITextSource newText, OffsetChangeMap offsetChangeMap)
+        private void DoReplace(int offset, int length, ITextSource newText, OffsetChangeMap? offsetChangeMap)
         {
             if (length == 0 && newText.TextLength == 0)
                 return;
@@ -861,6 +864,7 @@ namespace AvaloniaEdit.Document
 
             // fire DocumentChanging event
             Changing?.Invoke(this, args);
+            newText = args.InsertedText;
             TextChangingInternal?.Invoke(this, args);
 
             _undoStack.Push(this, args);
@@ -879,6 +883,7 @@ namespace AvaloniaEdit.Document
                 {
                     // optimize replacing the whole document
                     _rope.Clear();
+                    _lineManager.Remove(offset, length);
                     if (newText is RopeTextSource newRopeTextSource)
                         _rope.InsertRange(0, newRopeTextSource.GetRope());
                     else
@@ -1088,7 +1093,7 @@ namespace AvaloniaEdit.Document
         /// <summary>
         /// Is raised when the LineCount property changes.
         /// </summary>
-        public event EventHandler LineCountChanged;
+        public event EventHandler? LineCountChanged;
         #endregion
 
         #region Debugging
@@ -1129,7 +1134,7 @@ namespace AvaloniaEdit.Document
 
         #region Service Provider
 
-        private IServiceProvider _serviceProvider;
+        private IServiceProvider? _serviceProvider;
 
         internal IServiceProvider ServiceProvider
         {
@@ -1152,7 +1157,7 @@ namespace AvaloniaEdit.Document
             }
         }
 
-        object IServiceProvider.GetService(Type serviceType)
+        object? IServiceProvider.GetService(Type serviceType)
         {
             return ServiceProvider.GetService(serviceType);
         }
@@ -1161,10 +1166,10 @@ namespace AvaloniaEdit.Document
 
         #region FileName
 
-        private string _fileName;
+        private string? _fileName;
 
         /// <inheritdoc/>
-        public event EventHandler FileNameChanged;
+        public event EventHandler? FileNameChanged;
 
         private void OnFileNameChanged(EventArgs e)
         {
@@ -1172,7 +1177,7 @@ namespace AvaloniaEdit.Document
         }
 
         /// <inheritdoc/>
-        public string FileName
+        public string? FileName
         {
             get { return _fileName; }
             set
@@ -1184,6 +1189,15 @@ namespace AvaloniaEdit.Document
                 }
             }
         }
+		#endregion
+
+		#region Visual Properties
+        public double TopPadding { get; set; }
+        public double BottomPadding { get; set; }
+
+        public IBrush? BackgroundBrush { get; set; }
+
+        public double? PreferredWidth { get; set; }
         #endregion
     }
 }

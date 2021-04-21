@@ -16,6 +16,8 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+using Avalonia;
+using Avalonia.Media;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -259,6 +261,14 @@ namespace AvaloniaEdit.Document
 
         IDocumentLine IDocumentLine.PreviousLine => PreviousLine;
 
+        #endregion
+
+        #region Formatting Properties
+        public string? Tag { get; set; } = null;
+        public Thickness? Margin { get; set; } = null;
+        public double? LineSpacing { get; set; } = null;
+        public double? FontSize { get; set; } = null;
+        public string? Typeface { get; set; } = null;
         #endregion
 
         #region ToString

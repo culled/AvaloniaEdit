@@ -370,9 +370,9 @@ namespace AvaloniaEdit.Document
         /// Call this method to push an UndoableOperation on the undostack.
         /// The redostack will be cleared if you use this method.
         /// </summary>
-        public void Push(IUndoableOperation operation)
+        public void Push(IUndoableOperation operation, bool pushBack = true)
         {
-            Push(operation, false);
+            Push(operation, false, pushBack);
         }
 
         /// <summary>
@@ -382,14 +382,14 @@ namespace AvaloniaEdit.Document
         /// Use this method to store the caret position/selection on the undo stack to
         /// prevent having only actions that affect only the caret and not the document.
         /// </summary>
-        public void PushOptional(IUndoableOperation operation)
+        public void PushOptional(IUndoableOperation operation, bool pushBack = true)
         {
             if (_undoGroupDepth == 0)
                 throw new InvalidOperationException("Cannot use PushOptional outside of undo group");
-            Push(operation, true);
+            Push(operation, true, pushBack);
         }
 
-        private void Push(IUndoableOperation operation, bool isOptional)
+        private void Push(IUndoableOperation operation, bool isOptional, bool pushBack)
         {
             if (operation == null)
             {
@@ -402,7 +402,16 @@ namespace AvaloniaEdit.Document
 
                 var needsUndoGroup = _undoGroupDepth == 0;
                 if (needsUndoGroup) StartUndoGroup();
-                _undostack.PushBack(operation);
+
+                if (pushBack)
+                {
+                    _undostack.PushBack(operation);
+                }
+                else
+                {
+                    _undostack.PushFront(operation);
+                }
+
                 _actionCountInUndoGroup++;
                 if (isOptional)
                     _optionalActionCount++;
