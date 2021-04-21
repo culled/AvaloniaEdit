@@ -9,7 +9,7 @@ For a piece of software I've been creating, I choose to use and extend the Avalo
   - Zooming capabilities using a scale-transform
   - Ability to set the width of a document and center it in a larger viewport (like MS Word)
  
- Some, but not all parts have been properly updated for .NET 5 and Avalonia 10
+ Some, but not all parts of this project have been properly updated for .NET 5 and Avalonia 10. However, it does run 100% in my project that targets .NET 5.0 and Avalonia 10.
  
  I know my implementations may not be the best and/or in-line with how the awesome guys at AvaloniaEdit have done stuff, but I've tried to not make hacks to get all this functionality to work.
  
