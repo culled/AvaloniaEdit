@@ -529,7 +529,7 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
+            pos -= textView.DocumentBounds.TopLeft;
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null)
             {
@@ -560,7 +560,7 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
+            pos -= textView.DocumentBounds.TopLeft;
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             return line != null
                 ? new SimpleSegment(line.StartOffset, line.LastDocumentLine.EndOffset - line.StartOffset)
@@ -581,9 +581,11 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
-            if (pos.Y >= textView.DocumentHeight)
-                pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            pos -= textView.DocumentBounds.TopLeft;
+            //if (pos.Y >= textView.DocumentHeight)
+                //pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            if (pos.Y >= textView.DocumentBounds.Bottom)
+                pos = pos.WithY(textView.DocumentBounds.Bottom - ExtensionMethods.Epsilon);
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null)
             {
@@ -603,9 +605,11 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
-            if (pos.Y >= textView.DocumentHeight)
-                pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            pos -= textView.DocumentBounds.TopLeft;
+            //if (pos.Y >= textView.DocumentHeight)
+            //    pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            if (pos.Y >= textView.DocumentBounds.Bottom)
+                pos = pos.WithY(textView.DocumentBounds.Bottom - ExtensionMethods.Epsilon);
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null)
             {

@@ -132,30 +132,30 @@ namespace AvaloniaEdit.Document
 
         private Thread ownerThread = Thread.CurrentThread;
 
-		/// <summary>
-		/// Transfers ownership of the document to another thread. 
-		/// </summary>
-		/// <remarks>
-		/// <para>
-		/// The owner can be set to null, which means that no thread can access the document. But, if the document
-		/// has no owner thread, any thread may take ownership by calling <see cref="SetOwnerThread"/>.
-		/// </para>
-		/// </remarks>
-		public void SetOwnerThread(Thread newOwner)
-		{
+        /// <summary>
+        /// Transfers ownership of the document to another thread. 
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The owner can be set to null, which means that no thread can access the document. But, if the document
+        /// has no owner thread, any thread may take ownership by calling <see cref="SetOwnerThread"/>.
+        /// </para>
+        /// </remarks>
+        public void SetOwnerThread(Thread newOwner)
+        {
             // We need to lock here to ensure that in the null owner case,
-			// only one thread succeeds in taking ownership.
-			lock (_lockObject) {
-				if (ownerThread != null) {
-					VerifyAccess();
-				}
-				ownerThread = newOwner;
-			}
-		}	
+            // only one thread succeeds in taking ownership.
+            lock (_lockObject) {
+                if (ownerThread != null) {
+                    VerifyAccess();
+                }
+                ownerThread = newOwner;
+            }
+        }
 
         private void VerifyAccess()
         {
-            if(Thread.CurrentThread != ownerThread)
+            if (Thread.CurrentThread != ownerThread)
             {
                 throw new InvalidOperationException("Call from invalid thread.");
             }
@@ -409,6 +409,7 @@ namespace AvaloniaEdit.Document
         #region BeginUpdate / EndUpdate
 
         private int _beginUpdateCount;
+        private object _undoDescriptor;
 
         /// <summary>
         /// Gets if an update is running.
@@ -450,7 +451,16 @@ namespace AvaloniaEdit.Document
             _beginUpdateCount++;
             if (_beginUpdateCount == 1)
             {
-                _undoStack.StartUndoGroup();
+                if (_undoDescriptor != null && _undoStack.LastGroupDescriptor is int hash && hash == _undoDescriptor.GetHashCode())
+                {
+                    _undoStack.StartContinuedUndoGroup(hash);
+                }
+                else
+                {
+                    _undoDescriptor = new object();
+                    _undoStack.StartUndoGroup(_undoDescriptor.GetHashCode());
+                }
+
                 UpdateStarted?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -538,8 +548,9 @@ namespace AvaloniaEdit.Document
                 var lineCount = _lineTree.LineCount;
                 if (lineCount != _oldLineCount)
                 {
+                    var oldLineCount = _oldLineCount;
                     _oldLineCount = lineCount;
-                    LineCountChanged?.Invoke(this, EventArgs.Empty);
+                    LineCountChanged?.Invoke(this, new LineCountChangedEventArgs(oldLineCount, lineCount));
                     OnPropertyChanged("LineCount");
                 }
             }
@@ -865,6 +876,21 @@ namespace AvaloniaEdit.Document
 
             _undoStack.Push(this, args);
 
+            //Only continue the undo group if a letter, number, or mark was inserted
+            if (newText.TextLength == 1 && removedText.TextLength == 0)
+            {
+                CharacterClass charClass = TextUtilities.GetCharacterClass(newText.GetCharAt(0));
+
+                if (charClass != CharacterClass.IdentifierPart)
+                {
+                    _undoDescriptor = null;
+                }
+            }
+            else
+            {
+                _undoDescriptor = null;
+            }
+
             _cachedText = null; // reset cache of complete document text
             _fireTextChanged = true;
             var delayedEvents = new DelayedEvents();
@@ -1042,7 +1068,7 @@ namespace AvaloniaEdit.Document
                 if (value != _undoStack)
                 {
                     _undoStack.ClearAll(); // first clear old undo stack, so that it can't be used to perform unexpected changes on this document
-                                          // ClearAll() will also throw an exception when it's not safe to replace the undo stack (e.g. update is currently in progress)
+                                           // ClearAll() will also throw an exception when it's not safe to replace the undo stack (e.g. update is currently in progress)
                     _undoStack = value;
                     OnPropertyChanged("UndoStack");
                 }
@@ -1088,7 +1114,19 @@ namespace AvaloniaEdit.Document
         /// <summary>
         /// Is raised when the LineCount property changes.
         /// </summary>
-        public event EventHandler LineCountChanged;
+        public event EventHandler<LineCountChangedEventArgs> LineCountChanged;
+
+        public class LineCountChangedEventArgs : EventArgs
+        {
+            public int OldLineCount;
+            public int NewLineCount;
+
+            public LineCountChangedEventArgs(int oldLineCount, int newLineCount)
+			{
+                OldLineCount = oldLineCount;
+                NewLineCount = newLineCount;
+			}
+        }
         #endregion
 
         #region Debugging
@@ -1185,5 +1223,169 @@ namespace AvaloniaEdit.Document
             }
         }
         #endregion
-    }
+
+        #region Formatting
+        /// <summary>
+        /// Gets/Sets the line format that will be applied to newly-created lines
+        /// </summary>
+        public DocumentLineFormat CurrentNewLineFormat { get; set; }
+
+        /// <summary>
+        /// Event that fires when line formatting changes
+        /// </summary>
+        public event EventHandler<DocumentFormatChangeEventArgs> FormatChanged;
+
+        /// <summary>
+        /// Sets the format of an entire line given an offset in the text
+        /// </summary>
+        /// <param name="format">The format to apply</param>
+        /// <param name="offset">The offset of the line</param>
+        public void SetLineFormatByOffset(DocumentLineFormat format, int offset)
+        {
+            SetLineFormat(format, GetLineByOffset(offset));
+        }
+
+        /// <summary>
+        /// Sets the format of a line
+        /// </summary>
+        /// <param name="format">The format to apply</param>
+        /// <param name="line">The line to apply the formatting to</param>
+        public void SetLineFormat(DocumentLineFormat format, DocumentLine line)
+        {
+            SetLineFormat(format, line.LineNumber);
+        }
+
+        /// <summary>
+        /// Sets the format of a line given the line number
+        /// </summary>
+        /// <param name="format">The format to apply</param>
+        /// <param name="lineNumber">The number of the line to format</param>
+        public void SetLineFormat(DocumentLineFormat format, int lineNumber)
+        {
+            PerformChangeLineFormats(new Dictionary<int, DocumentLineFormat> { { lineNumber, format } });
+        }
+
+        /// <summary>
+        /// Sets the format for a given list of line numbers
+        /// </summary>
+        /// <param name="format">The format to apply</param>
+        /// <param name="lineNumbers">A list of line numbers to apply the formatting to</param>
+        public void SetLineFormats(DocumentLineFormat format, List<int> lineNumbers)
+        {
+            var changes = new Dictionary<int, DocumentLineFormat>();
+
+            foreach (var line in lineNumbers)
+            {
+                changes.Add(line, format);
+            }
+
+            PerformChangeLineFormats(changes);
+        }
+
+        /// <summary>
+        /// Sets line formats given an array of DocumentLineFormatChange changes 
+        /// </summary>
+        /// <param name="changes">The array of line changes</param>
+        /// <param name="setNewFormat">If true, the "NewFormat" will be applied from the change, else the "OldFormat" will be applied</param>
+        internal void SetLineFormatsFromChangeList(DocumentFormatChangeEventArgs.DocumentLineFormatChange[] changes, bool setNewFormat)
+        {
+            var formatChanges = new Dictionary<int, DocumentLineFormat>();
+
+            for (int i = 0; i < changes.Length; i++)
+            {
+                if (setNewFormat)
+                {
+                    formatChanges.Add(changes[i].LineNumber, changes[i].NewFormat);
+                }
+                else
+                {
+                    formatChanges.Add(changes[i].LineNumber, changes[i].OldFormat);
+                }
+            }
+
+            PerformChangeLineFormats(formatChanges);
+        }
+
+        /// <summary>
+        /// Applies formatting to lines
+        /// </summary>
+        /// <param name="changes">A dictionary where the key is the line number, and the value is the formatting to apply</param>
+        private void PerformChangeLineFormats(Dictionary<int, DocumentLineFormat> changes)
+        {
+            //Stop the previous chained undo group
+            _undoDescriptor = null;
+
+            // Ensure that all changes take place inside an update group.
+            // Will also take care of throwing an exception if inDocumentChanging is set.
+            BeginUpdate();
+            try
+            {
+                // protect document change against corruption by other changes inside the event handlers
+                InDocumentChanging = true;
+                try
+                {
+                    var changeOperations = new List<DocumentFormatChangeEventArgs.DocumentLineFormatChange>();
+                    int startOffset = -1, endOffset = -1;
+
+                    foreach (var kvp in changes)
+                    {
+                        DocumentLine line = GetLineByNumber(kvp.Key);
+
+                        DocumentLineFormat oldFormat = line.LineFormat;
+                        line.LineFormat = kvp.Value;
+
+                        if (startOffset == -1)
+                        {
+                            startOffset = line.Offset;
+                            endOffset = line.EndOffset;
+                        }
+                        else
+                        {
+                            startOffset = Math.Min(startOffset, line.Offset);
+                            endOffset = Math.Max(endOffset, line.EndOffset);
+                        }
+
+                        changeOperations.Add(new DocumentFormatChangeEventArgs.DocumentLineFormatChange(line.LineNumber, oldFormat, kvp.Value));
+                    }
+
+                    var args = new DocumentFormatChangeEventArgs(changeOperations, startOffset, endOffset - startOffset);
+                    _undoStack.Push(new DocumentFormatChangeOperation(this, args));
+
+                    FormatChanged?.Invoke(this, args);
+                }
+                finally
+                {
+                    InDocumentChanging = false;
+                }
+            }
+            finally
+            {
+                //Ensure this undo won't be chained
+                _undoDescriptor = null;
+
+                EndUpdate();
+            }
+        }
+
+        /// <summary>
+        /// Gets a line's formatting given its line number
+        /// </summary>
+        /// <param name="lineNumber">The line number of the line</param>
+        /// <returns>The formatting of the line</returns>
+        public DocumentLineFormat GetLineFormat(int lineNumber)
+        {
+            return GetLineByNumber(lineNumber).LineFormat;
+        }
+
+        /// <summary>
+        /// Gets a line's formatting given an offset in the text
+        /// </summary>
+        /// <param name="offset">The offset to get the line at</param>
+        /// <returns>The formatting of the line</returns>
+        public DocumentLineFormat GetLineFormatByOffset(int offset)
+        {
+            return GetLineByOffset(offset).LineFormat;
+        }
+        #endregion
+	}
 }

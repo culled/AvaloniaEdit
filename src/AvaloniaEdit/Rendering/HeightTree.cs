@@ -128,7 +128,7 @@ namespace AvaloniaEdit.Rendering
             var lineNumber = 0;
             foreach (var ls in _document.Lines)
             {
-                nodes[lineNumber++] = new HeightTreeNode(ls, _defaultLineHeight);
+                nodes[lineNumber++] = new HeightTreeNode(ls, _defaultLineHeight + ls.LineFormat.Margins.Top + ls.LineFormat.Margins.Bottom);
             }
             Debug.Assert(nodes.Length > 0);
             // now build the corresponding balanced tree
@@ -213,7 +213,7 @@ namespace AvaloniaEdit.Rendering
 
         private HeightTreeNode InsertAfter(HeightTreeNode node, DocumentLine newLine)
         {
-            var newNode = new HeightTreeNode(newLine, _defaultLineHeight);
+            var newNode = new HeightTreeNode(newLine, _defaultLineHeight + newLine.LineFormat.Margins.Top + newLine.LineFormat.Margins.Bottom);
             if (node.Right == null)
             {
                 if (node.LineNode.CollapsedSections != null)

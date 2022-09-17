@@ -27,11 +27,13 @@ namespace AvaloniaEdit.Document
 	{
 	    private readonly TextDocument _document;
 	    private readonly DocumentChangeEventArgs _change;
+		private readonly DocumentLineFormat _docLineFormat;
 		
 		public DocumentChangeOperation(TextDocument document, DocumentChangeEventArgs change)
 		{
 			_document = document;
 			_change = change;
+			_docLineFormat = document.CurrentNewLineFormat;
 		}
 		
 		public void Undo(UndoStack stack)
@@ -54,12 +56,14 @@ namespace AvaloniaEdit.Document
 		
 		public void Undo()
 		{
+			_document.CurrentNewLineFormat = _docLineFormat;
 			var map = _change.OffsetChangeMapOrNull;
 			_document.Replace(_change.Offset, _change.InsertionLength, _change.RemovedText, map?.Invert());
 		}
 		
 		public void Redo()
 		{
+			_document.CurrentNewLineFormat = _docLineFormat;
 			_document.Replace(_change.Offset, _change.RemovalLength, _change.InsertedText, _change.OffsetChangeMapOrNull);
 		}
 	}

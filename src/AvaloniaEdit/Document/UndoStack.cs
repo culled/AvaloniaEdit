@@ -307,9 +307,9 @@ namespace AvaloniaEdit.Document
                 }
                 finally
                 {
-                    State = StateListen;
                     FileModified(-1);
                     CallEndUpdateOnAffectedDocuments();
+                    State = StateListen;
                 }
                 RecalcIsOriginalFile();
                 if (_undostack.Count == 0)
@@ -346,9 +346,9 @@ namespace AvaloniaEdit.Document
                 }
                 finally
                 {
-                    State = StateListen;
                     FileModified(1);
                     CallEndUpdateOnAffectedDocuments();
+                    State = StateListen;
                 }
                 RecalcIsOriginalFile();
                 if (_redostack.Count == 0)

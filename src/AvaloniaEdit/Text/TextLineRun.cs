@@ -64,21 +64,28 @@ namespace AvaloniaEdit.Text
                 {
                     return 0.0;
                 }
+
                 if (IsEmbedded && TextRun is TextEmbeddedObject embeddedObject)
                 {
                     var box = embeddedObject.ComputeBoundingBox();
                     return box.Height;
                 }
-                
-                return GetDefaultLineHeight(TextRun.Properties.FontMetrics);
+
+                if (_formattedText == null)
+				{
+                    return GetDefaultLineHeight(TextRun.Properties.FontMetrics);
+                }
+                //return GetDefaultLineHeight(TextRun.Properties.FontMetrics);
+                return _formattedTextSize.Height;
             }
         }
 
         public static double GetDefaultLineHeight(FontMetrics fontMetrics)
         {
             // adding an extra 15% of the line height look good across different font sizes
-            double extraLineHeight = fontMetrics.LineHeight * 0.15;
-            return fontMetrics.LineHeight + extraLineHeight;
+            // double extraLineHeight = fontMetrics.LineHeight * 0.15;
+            // return fontMetrics.LineHeight + extraLineHeight;
+            return fontMetrics.LineHeight;
         }
 
         public static double GetDefaultBaseline(FontMetrics fontMetrics)
@@ -98,6 +105,19 @@ namespace AvaloniaEdit.Text
         {
             var textRun = textSource.GetTextRun(index);
             var stringRange = textRun.GetStringRange();
+
+            switch(paragraphProperties.TextCasing)
+			{
+                case Document.DocumentLineFormat.TextCasingMode.AllLower:
+                    stringRange = stringRange.AsLower();
+                    break;
+                case Document.DocumentLineFormat.TextCasingMode.AllUpper:
+                    stringRange = stringRange.AsUpper();
+                    break;
+                default:
+                    break;
+			}
+
             return Create(textSource, stringRange, textRun, index, lengthLeft, paragraphProperties);
         }
 
@@ -185,11 +205,12 @@ namespace AvaloniaEdit.Text
         {
             TextLineRun run = CreateTextLineRun(stringRange, textRun, textRun.Length, paragraphProperties);
 
-            if (run.Width <= widthLeft)
-                return run;
-
+            //We should always test for line wrapping as the wrapping text may be composed of many segments
             TextLineRun wrapped = PerformTextWrapping(run, widthLeft, paragraphProperties);
-            wrapped.Width = run.Width;
+
+            if (wrapped == null) return run;
+
+            wrapped.Width = widthLeft;
             return wrapped;
         }
 
@@ -203,6 +224,7 @@ namespace AvaloniaEdit.Text
             };
 
             var tf = run.Typeface;
+
             var formattedText = new FormattedText
             {
                 Text = stringRange.ToString(run.Length),
@@ -229,9 +251,21 @@ namespace AvaloniaEdit.Text
 
         private static TextLineRun PerformTextWrapping(TextLineRun run, double widthLeft, TextParagraphProperties paragraphProperties)
         {
+            var extendedStringRange = new StringRange(run.StringRange.String, run.StringRange.OffsetToFirstChar, run.StringRange.String.Length - run.StringRange.OffsetToFirstChar);
+            var extendedRun = CreateTextLineRun(extendedStringRange, run.TextRun, extendedStringRange.Length, paragraphProperties);
+
+            (int firstIndex, int trailingLength) extendedCharacterHit = extendedRun.GetCharacterFromDistance(widthLeft);
+            
+            //Don't wrap if this line didn't take up the full space
+            if (extendedCharacterHit.firstIndex == extendedRun.Length - 1) return null;
+
             (int firstIndex, int trailingLength) characterHit = run.GetCharacterFromDistance(widthLeft);
 
+            int extendedLenForTextWrapping = FindPositionForTextWrapping(extendedRun.StringRange, extendedCharacterHit.firstIndex);
             int lenForTextWrapping = FindPositionForTextWrapping(run.StringRange, characterHit.firstIndex);
+
+            //Don't wrap if the actual run wouldn't wrap at the extended point and that the run doesn't end at the extended wrap point
+            if (extendedLenForTextWrapping != lenForTextWrapping && run.Length != extendedLenForTextWrapping) return null;
 
             return CreateTextLineRun(
                 run.StringRange.WithLength(lenForTextWrapping),
@@ -245,10 +279,13 @@ namespace AvaloniaEdit.Text
             if (maxIndex > range.Length - 1)
                 maxIndex = range.Length - 1;
 
+            if (IsSpace(range[maxIndex]))
+                return maxIndex + 1;
+
             LineBreakEnumerator lineBreakEnumerator = new LineBreakEnumerator(
                 new ReadOnlySlice<char>(range.String.AsMemory().Slice(range.OffsetToFirstChar, range.Length)));
 
-            LineBreak? lineBreak = null;
+            LineBreak ? lineBreak = null;
 
             while (lineBreakEnumerator.MoveNext())
             {

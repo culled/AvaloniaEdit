@@ -16,6 +16,7 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+using AvaloniaEdit.Utils;
 using System;
 using System.ComponentModel;
 using System.Reflection;
@@ -558,5 +559,24 @@ namespace AvaloniaEdit
                 }
             }
         }
+
+        private double _defaultLineSpacingPercentage = 1.0;
+
+        /// <summary>
+        /// Gets/Sets the default line spacing percentage
+        /// </summary>
+        [DefaultValue(1.0)]
+        public double DefaultLineSpacingPercentage
+		{
+            get => _defaultLineSpacingPercentage;
+            set
+			{
+                if(!_defaultLineSpacingPercentage.IsClose(value))
+				{
+                    _defaultLineSpacingPercentage = value;
+                    OnPropertyChanged(nameof(DefaultLineSpacingPercentage));
+				}
+			}
+		}
     }
 }

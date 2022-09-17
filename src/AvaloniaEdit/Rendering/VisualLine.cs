@@ -121,13 +121,16 @@ namespace AvaloniaEdit.Rendering
         /// </summary>
         public double VisualTop { get; internal set; }
 
-        internal VisualLine(TextView textView, DocumentLine firstDocumentLine)
+        public Thickness Margins { get; private set; }
+
+        internal VisualLine(TextView textView, DocumentLine firstDocumentLine, TextParagraphProperties paragraphProperties)
         {
             Debug.Assert(textView != null);
             Debug.Assert(firstDocumentLine != null);
             _textView = textView;
             Document = textView.Document;
             FirstDocumentLine = firstDocumentLine;
+            Margins = paragraphProperties.Margins;
         }
 
         internal void ConstructVisualElements(ITextRunConstructionContext context, VisualLineElementGenerator[] generators)
@@ -302,9 +305,11 @@ namespace AvaloniaEdit.Rendering
         internal void SetTextLines(List<TextLine> textLines)
         {
             _textLines = new ReadOnlyCollection<TextLine>(textLines);
-            Height = 0;
+            Height = Margins.Top + Margins.Bottom;
             foreach (var line in textLines)
+            {
                 Height += line.Height;
+            }
         }
 
         /// <summary>
@@ -378,7 +383,7 @@ namespace AvaloniaEdit.Rendering
         {
             if (textLine == null)
                 throw new ArgumentNullException(nameof(textLine));
-            var pos = VisualTop;
+            var pos = VisualTop + Margins.Top;
             foreach (var tl in TextLines)
             {
                 if (tl == textLine)
@@ -425,7 +430,7 @@ namespace AvaloniaEdit.Rendering
         public TextLine GetTextLineByVisualYPosition(double visualTop)
         {
             const double epsilon = 0.0001;
-            var pos = VisualTop;
+            var pos = VisualTop + Margins.Top;
             foreach (var tl in TextLines)
             {
                 pos += tl.Height;
@@ -776,15 +781,20 @@ namespace AvaloniaEdit.Rendering
         public VisualLineDrawingVisual(VisualLine visualLine)
         {
             VisualLine = visualLine;
-            LineHeight = VisualLine.TextLines.Sum(textLine => textLine.Height);
+            LineHeight = VisualLine.Margins.Top + VisualLine.Margins.Bottom;
+
+            foreach (var textLine in VisualLine.TextLines)
+            {
+                LineHeight += textLine.Height;
+            }
         }
 
         public override void Render(DrawingContext context)
         {
-            double pos = 0;
+            double pos = VisualLine.Margins.Top;
             foreach (var textLine in VisualLine.TextLines)
             {
-                textLine.Draw(context, new Point(0, pos));
+                textLine.Draw(context, new Point(VisualLine.Margins.Left, pos));
                 pos += textLine.Height;
             }
         }

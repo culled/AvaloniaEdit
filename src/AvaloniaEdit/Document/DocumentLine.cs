@@ -16,6 +16,7 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+using Avalonia;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -50,6 +51,8 @@ namespace AvaloniaEdit.Document
 
         internal DocumentLine(TextDocument document)
         {
+            LineFormat = document.CurrentNewLineFormat;
+
 #if DEBUG
             Debug.Assert(document != null);
             _document = document;
@@ -275,5 +278,15 @@ namespace AvaloniaEdit.Document
                 "[DocumentLine Number={0} Offset={1} Length={2}]", LineNumber, Offset, Length);
         }
         #endregion
-    }
+
+        #region Formatting Properties
+        private DocumentLineFormat _lineFormat;
+
+        public DocumentLineFormat LineFormat
+		{
+            get => _lineFormat;
+            internal set => _lineFormat = value;
+		}
+		#endregion
+	}
 }

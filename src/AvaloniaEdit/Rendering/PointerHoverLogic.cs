@@ -99,8 +99,11 @@ namespace AvaloniaEdit.Rendering
 
         private void OnTimerElapsed(object sender, EventArgs e)
         {
-            _timer.Stop();
-            _timer = null;
+            if (_timer != null)
+            {
+                _timer.Stop();
+                _timer = null;
+            }
 
             _hovering = true;
             OnPointerHover(_hoverLastEventArgs);

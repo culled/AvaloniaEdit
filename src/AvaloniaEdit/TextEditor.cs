@@ -209,15 +209,19 @@ namespace AvaloniaEdit
 
             if (change.Property == WordWrapProperty)
             {
-                if (WordWrap)
-                {
-                    _horizontalScrollBarVisibilityBck = HorizontalScrollBarVisibility;
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
-                }
+                //if (WordWrap)
+                //{
+                //    _horizontalScrollBarVisibilityBck = HorizontalScrollBarVisibility;
+                //    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+                //}
+                //else
+                //{
+                //    HorizontalScrollBarVisibility = _horizontalScrollBarVisibilityBck;
+                //}
+                if(WordWrap)
+                    TextArea.TextView.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
                 else
-                {
-                    HorizontalScrollBarVisibility = _horizontalScrollBarVisibilityBck;
-                }
+                    TextArea.TextView.SetValue(TextBlock.TextWrappingProperty, TextWrapping.NoWrap);
             }
         }
 
@@ -286,10 +290,20 @@ namespace AvaloniaEdit
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
         {
             base.OnApplyTemplate(e);
+
+            //If the parent view is reloaded, a new content parent will be created, so we must first disconnect from the previous parent
+            if (TextArea.Parent is ScrollViewer parent)
+            {
+                parent.Content = null;
+            }
+            else
+			{
+                //Only install on initial creation
+                //SearchPanel.Install(this);
+            }
+
             ScrollViewer = (ScrollViewer)e.NameScope.Find("PART_ScrollViewer");
             ScrollViewer.Content = TextArea;
-
-            SearchPanel.Install(this);
         }
 
         /// <summary>
@@ -555,7 +569,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Copies the current selection to the clipboard.
         /// </summary>
-        public void Copy()
+        public virtual void Copy()
         {
             if (ApplicationCommands.Copy.CanExecute(null, TextArea))
             {
@@ -566,7 +580,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Removes the current selection and copies it to the clipboard.
         /// </summary>
-        public void Cut()
+        public virtual void Cut()
         {
             if (ApplicationCommands.Cut.CanExecute(null, TextArea))
             {
@@ -677,7 +691,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Pastes the clipboard content.
         /// </summary>
-        public void Paste()
+        public virtual void Paste()
         {
             if (ApplicationCommands.Paste.CanExecute(null, TextArea))
             {
@@ -689,7 +703,7 @@ namespace AvaloniaEdit
         /// Redoes the most recent undone command.
         /// </summary>
         /// <returns>True is the redo operation was successful, false is the redo stack is empty.</returns>
-        public bool Redo()
+        public virtual bool Redo()
         {
             if (CanRedo)
             {
@@ -752,7 +766,7 @@ namespace AvaloniaEdit
         /// Undoes the most recent command.
         /// </summary>
         /// <returns>True is the undo operation was successful, false is the undo stack is empty.</returns>
-        public bool Undo()
+        public virtual bool Undo()
         {
             if (CanUndo)
             {
@@ -765,7 +779,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Gets if the most recent undone command can be redone.
         /// </summary>
-        public bool CanRedo
+        public virtual bool CanRedo
         {
            get { return ApplicationCommands.Redo.CanExecute(null, TextArea); }
         }
@@ -773,7 +787,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Gets if the most recent command can be undone.
         /// </summary>
-        public bool CanUndo
+        public virtual bool CanUndo
         {
             get { return ApplicationCommands.Undo.CanExecute(null, TextArea); }
         }
@@ -916,7 +930,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Clears the text.
         /// </summary>
-        public void Clear()
+        public virtual void Clear()
         {
             Text = string.Empty;
         }
@@ -1087,7 +1101,7 @@ namespace AvaloniaEdit
             set => SetValue(HorizontalScrollBarVisibilityProperty, value);
         }
 
-        private ScrollBarVisibility _horizontalScrollBarVisibilityBck = ScrollBarVisibility.Auto;
+        //private ScrollBarVisibility _horizontalScrollBarVisibilityBck = ScrollBarVisibility.Auto;
 
         /// <summary>
         /// Dependency property for <see cref="VerticalScrollBarVisibility"/>

@@ -115,6 +115,12 @@ namespace AvaloniaEdit.Editing
 
             if (e.NameScope.Find("PART_CP") is ContentPresenter contentPresenter)
             {
+                //If the parent view is reloaded, a new content parent will be created, so we must first disconnect from the previous parent
+                if (TextView.Parent is ContentPresenter parentPresenter)
+                {
+                    parentPresenter.Content = null;
+                }
+
                 contentPresenter.Content = TextView;
             }
         }
@@ -763,6 +769,21 @@ namespace AvaloniaEdit.Editing
         public event EventHandler<TextInputEventArgs> TextEntered;
 
         /// <summary>
+        /// Options property.
+        /// </summary>
+        public static readonly StyledProperty<bool> NormalizeNewLinesProperty
+            = AvaloniaProperty.Register<TextArea, bool>(nameof(NormalizeNewLines));
+
+        /// <summary>
+        /// Gets/sets if new lines are normalized to '\n' or not
+        /// </summary>
+        public bool NormalizeNewLines
+        {
+            get => GetValue(NormalizeNewLinesProperty);
+            set => SetValue(NormalizeNewLinesProperty, value);
+        }
+
+        /// <summary>
         /// Raises the TextEntering event.
         /// </summary>
         protected virtual void OnTextEntering(TextInputEventArgs e)
@@ -828,6 +849,13 @@ namespace AvaloniaEdit.Editing
                 throw new ArgumentNullException(nameof(e));
             if (Document == null)
                 throw ThrowUtil.NoDocumentAssigned();
+
+            // Override the newlines if needed
+            if(NormalizeNewLines)
+            {
+                e.Text = TextUtilities.NormalizeNewLines(e.Text, "\n");
+            }
+
             OnTextEntering(e);
             if (!e.Handled)
             {
@@ -847,7 +875,7 @@ namespace AvaloniaEdit.Editing
 
         private void ReplaceSelectionWithNewLine()
         {
-            var newLine = TextUtilities.GetNewLineFromDocument(Document, Caret.Line);
+            var newLine = NormalizeNewLines ? "\n" : TextUtilities.GetNewLineFromDocument(Document, Caret.Line);
             using (Document.RunUpdate())
             {
                 ReplaceSelectionWithText(newLine);

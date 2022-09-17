@@ -78,5 +78,25 @@ namespace AvaloniaEdit.Text
 
             return value.Substring(offsetToFirstChar, length);
         }
+
+        public StringRange AsUpper()
+		{
+            if (!string.IsNullOrEmpty(String))
+            {
+                return new StringRange(String.ToUpperInvariant(), OffsetToFirstChar, Length);
+            }
+
+            return this;
+		}
+
+        public StringRange AsLower()
+        {
+            if (!string.IsNullOrEmpty(String))
+            {
+                return new StringRange(String.ToLowerInvariant(), OffsetToFirstChar, Length);
+            }
+
+            return this;
+        }
     }
 }

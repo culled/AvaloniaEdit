@@ -243,7 +243,7 @@ namespace AvaloniaEdit.Highlighting
                 return true;
             return color.Background == null && color.Foreground == null
                 && color.FontStyle == null && color.FontWeight == null
-                && color.Underline == null;
+                && color.Underline == null && color.Strikethrough == null;
         }
 
         /// <summary>

@@ -181,7 +181,9 @@ namespace AvaloniaEdit.Rendering
         private static IEnumerable<Rect> ProcessTextLines(TextView textView, VisualLine visualLine, int segmentStartVc, int segmentEndVc)
         {
             var lastTextLine = visualLine.TextLines.Last();
-            var scrollOffset = textView.ScrollOffset;
+            //var scrollOffset = textView.ScrollOffset;
+            //var offset = new Point(textView.DocumentMargin.Left, 0.0) - textView.ScrollOffset;
+            var offset = textView.DocumentBounds.TopLeft;
 
             for (var i = 0; i < visualLine.TextLines.Count; i++)
             {
@@ -197,18 +199,20 @@ namespace AvaloniaEdit.Rendering
 
                 if (segmentEndVc < visualStartCol)
                     break;
-                if (lastTextLine != line && segmentStartVc > visualEndCol)
+                if (lastTextLine != line && segmentStartVc >= visualEndCol)
                     continue;
                 var segmentStartVcInLine = Math.Max(segmentStartVc, visualStartCol);
                 var segmentEndVcInLine = Math.Min(segmentEndVc, visualEndCol);
-                y -= scrollOffset.Y;
+                //y -= scrollOffset.Y;
+                y += offset.Y;
                 var lastRect = Rect.Empty;
                 if (segmentStartVcInLine == segmentEndVcInLine)
                 {
                     // GetTextBounds crashes for length=0, so we'll handle this case with GetDistanceFromCharacterHit
                     // We need to return a rectangle to ensure empty lines are still visible
                     var pos = visualLine.GetTextLineVisualXPosition(line, segmentStartVcInLine);
-                    pos -= scrollOffset.X;
+                    //pos -= scrollOffset.X;
+                    pos += offset.X;
                     // The following special cases are necessary to get rid of empty rectangles at the end of a TextLine if "Show Spaces" is active.
                     // If not excluded once, the same rectangle is calculated (and added) twice (since the offset could be mapped to two visual positions; end/start of line), if there is no trailing whitespace.
                     // Skip this TextLine segment, if it is at the end of this line and this line is not the last line of the VisualLine and the selection continues and there is no trailing whitespace.
@@ -223,8 +227,10 @@ namespace AvaloniaEdit.Rendering
                     if (segmentStartVcInLine <= visualEndCol)
                     {
                         var b = line.GetTextBounds(segmentStartVcInLine, segmentEndVcInLine - segmentStartVcInLine);
-                        var left = b.X - scrollOffset.X;
-                        var right = b.Right - scrollOffset.X;
+                        //var left = b.X - scrollOffset.X;
+                        //var right = b.Right - scrollOffset.X;
+                        var left = b.X + offset.X;
+                        var right = b.Right + offset.X;
                         if (!lastRect.IsEmpty)
                             yield return lastRect;
                         // left>right is possible in RTL languages
@@ -259,7 +265,12 @@ namespace AvaloniaEdit.Rendering
                     //	right = Math.Max(((IScrollInfo)textView).ExtentWidth, ((IScrollInfo)textView).ViewportWidth);
                     //} else {
 
-                    right = visualLine.GetTextLineVisualXPosition(lastTextLine, segmentEndVc);
+                    //right = visualLine.GetTextLineVisualXPosition(line, segmentEndVc);
+                    right = visualLine.GetTextLineVisualXPosition(line, visualEndCol);
+                    //left -= scrollOffset.X;
+                    //right -= scrollOffset.X;
+                    left += offset.X;
+                    right += offset.X;
                     //}
                     var extendSelection = new Rect(Math.Min(left, right), y, Math.Abs(right - left), line.Height);
                     if (!lastRect.IsEmpty)
@@ -273,7 +284,7 @@ namespace AvaloniaEdit.Rendering
                         {
                             // If the end of the line is in an RTL segment, keep lastRect and extendSelection separate.
                             yield return lastRect;
-                            yield return extendSelection;
+                            //yield return extendSelection;
                         }
                     }
                     else

@@ -26,11 +26,15 @@ namespace AvaloniaEdit.Text
 
         public override double Baseline { get; }
 
+        public override double LeftMargin { get; }
+
         internal static TextLineImpl Create(TextParagraphProperties paragraphProperties, int firstIndex, int paragraphLength, TextSource textSource)
         {
             var index = firstIndex;
             var visibleLength = 0;
             var widthLeft = paragraphProperties.TextWrapping == TextWrapping.Wrap && paragraphLength > 0 ? paragraphLength : double.MaxValue;
+            widthLeft -= paragraphProperties.Margins.Left + paragraphProperties.Margins.Right;
+
             TextLineRun prevRun = null;
             var run = TextLineRun.Create(textSource, index, firstIndex, widthLeft, paragraphProperties);
 
@@ -80,6 +84,8 @@ namespace AvaloniaEdit.Text
 
             foreach (var run in runs)
             {
+                double runHeight = run.Height * paragraphProperties.LineSpacingPercentage;
+
                 _runs[index++] = run;
 
                 if (run.Length <= 0) continue;
@@ -90,8 +96,8 @@ namespace AvaloniaEdit.Text
                 }
                 else
                 {
-                    top = Math.Max(top, run.Height - run.Baseline);
-                    height = Math.Max(height, run.Height);
+                    top = Math.Max(top, runHeight - run.Baseline);
+                    height = Math.Max(height, runHeight);
                     Baseline = Math.Max(Baseline, run.Baseline);
                 }
 
@@ -103,9 +109,11 @@ namespace AvaloniaEdit.Text
 
             if (Height <= 0)
             {
-                Height = TextLineRun.GetDefaultLineHeight(paragraphProperties.DefaultTextRunProperties.FontMetrics);
+                Height = TextLineRun.GetDefaultLineHeight(paragraphProperties.DefaultTextRunProperties.FontMetrics) * paragraphProperties.LineSpacingPercentage;
                 Baseline = TextLineRun.GetDefaultBaseline(paragraphProperties.DefaultTextRunProperties.FontMetrics);
             }
+
+            LeftMargin = paragraphProperties.Margins.Left;
 
             FirstIndex = firstIndex;
             TrailingWhitespaceLength = trailing.Count;
@@ -159,7 +167,7 @@ namespace AvaloniaEdit.Text
 
         public override double GetDistanceFromCharacter(int firstIndex, int trailingLength)
         {
-            double distance = 0;
+            double distance = LeftMargin;
             var index = firstIndex + (trailingLength != 0 ? 1 : 0) - FirstIndex;
             var runs = _runs;
             foreach (var run in runs)
@@ -178,6 +186,8 @@ namespace AvaloniaEdit.Text
 
         public override (int firstIndex, int trailingLength) GetCharacterFromDistance(double distance)
         {
+            distance -= LeftMargin;
+
             var firstIndex = FirstIndex;
             if (distance < 0)
             {
