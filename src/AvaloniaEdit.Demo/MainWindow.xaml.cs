@@ -2,21 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.Native;
-using Avalonia.Platform;
 using AvaloniaEdit.CodeCompletion;
+using AvaloniaEdit.Demo.Resources;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
-using AvaloniaEdit.Highlighting;
+using AvaloniaEdit.Folding;
 using AvaloniaEdit.Rendering;
+using AvaloniaEdit.TextMate;
+using TextMateSharp.Grammars;
 
 namespace AvaloniaEdit.Demo
 {
@@ -25,32 +24,75 @@ namespace AvaloniaEdit.Demo
     public class MainWindow : Window
     {
         private readonly TextEditor _textEditor;
+        private FoldingManager _foldingManager;
+        private readonly TextMate.TextMate.Installation _textMateInstallation;
         private CompletionWindow _completionWindow;
         private OverloadInsightWindow _insightWindow;
-        private Button _addControlBtn;
-        private Button _clearControlBtn;
+        private Button _addControlButton;
+        private Button _clearControlButton;
+        private Button _changeThemeButton;
+        private ComboBox _syntaxModeCombo;
+        private TextBlock _statusTextBlock;
         private ElementGenerator _generator = new ElementGenerator();
+        private RegistryOptions _registryOptions;
+        private int _currentTheme = (int)ThemeName.DarkPlus;
 
         public MainWindow()
         {
-            InitializeComponent();            
+            InitializeComponent();
 
             _textEditor = this.FindControl<TextEditor>("Editor");
             _textEditor.Background = Brushes.Transparent;
             _textEditor.ShowLineNumbers = true;
-            //_textEditor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("C#");
+            _textEditor.ContextMenu = new ContextMenu 
+            { 
+                Items = new List<MenuItem> 
+                { 
+                    new MenuItem { Header = "Copy", InputGesture = new KeyGesture(Key.C, KeyModifiers.Control) },
+                    new MenuItem { Header = "Paste", InputGesture = new KeyGesture(Key.V, KeyModifiers.Control) },
+                    new MenuItem { Header = "Cut", InputGesture = new KeyGesture(Key.X, KeyModifiers.Control) }
+                } 
+            };
+            _textEditor.TextArea.Background = this.Background;
             _textEditor.TextArea.TextEntered += textEditor_TextArea_TextEntered;
             _textEditor.TextArea.TextEntering += textEditor_TextArea_TextEntering;
-            _textEditor.TextArea.IndentationStrategy = new Indentation.CSharp.CSharpIndentationStrategy();
+            _textEditor.Options.ShowBoxForControlCharacters = true;
+            _textEditor.TextArea.IndentationStrategy = new Indentation.CSharp.CSharpIndentationStrategy(_textEditor.Options);
+            _textEditor.TextArea.Caret.PositionChanged += Caret_PositionChanged;
+            _textEditor.TextArea.RightClickMovesCaret = true;
 
-            _addControlBtn = this.FindControl<Button>("addControlBtn");
-            _addControlBtn.Click += _addControlBtn_Click;
+            _addControlButton = this.FindControl<Button>("addControlBtn");
+            _addControlButton.Click += AddControlButton_Click;
 
-            _clearControlBtn = this.FindControl<Button>("clearControlBtn");
-            _clearControlBtn.Click += _clearControlBtn_Click; ;
+            _clearControlButton = this.FindControl<Button>("clearControlBtn");
+            _clearControlButton.Click += ClearControlButton_Click; ;
+
+            _changeThemeButton = this.FindControl<Button>("changeThemeBtn");
+            _changeThemeButton.Click += ChangeThemeButton_Click;
 
             _textEditor.TextArea.TextView.ElementGenerators.Add(_generator);
-            
+
+            _registryOptions = new RegistryOptions(
+                (ThemeName)_currentTheme);
+
+            _textMateInstallation = _textEditor.InstallTextMate(_registryOptions);
+
+            Language csharpLanguage = _registryOptions.GetLanguageByExtension(".cs");
+
+            _syntaxModeCombo = this.FindControl<ComboBox>("syntaxModeCombo");
+            _syntaxModeCombo.Items = _registryOptions.GetAvailableLanguages();
+            _syntaxModeCombo.SelectedItem = csharpLanguage;
+            _syntaxModeCombo.SelectionChanged += SyntaxModeCombo_SelectionChanged;
+
+            string scopeName = _registryOptions.GetScopeByLanguageId(csharpLanguage.Id);
+
+            _textEditor.Document = new TextDocument(
+                "// AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
+                ResourceLoader.LoadSampleFile(scopeName));
+            _textMateInstallation.SetGrammar(_registryOptions.GetScopeByLanguageId(csharpLanguage.Id));
+
+            _statusTextBlock = this.Find<TextBlock>("StatusText");
+
             this.AddHandler(PointerWheelChangedEvent, (o, i) =>
             {
                 if (i.KeyModifiers != KeyModifiers.Control) return;
@@ -59,25 +101,73 @@ namespace AvaloniaEdit.Demo
             }, RoutingStrategies.Bubble, true);
         }
 
+        private void Caret_PositionChanged(object sender, EventArgs e)
+        {
+            _statusTextBlock.Text = string.Format("Line {0} Column {1}", 
+                _textEditor.TextArea.Caret.Line,
+                _textEditor.TextArea.Caret.Column);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+
+            _textMateInstallation.Dispose();
+        }
+
+        private void SyntaxModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Language language = (Language)_syntaxModeCombo.SelectedItem;
+
+            if (_foldingManager != null)
+            {
+                _foldingManager.Clear();
+                FoldingManager.Uninstall(_foldingManager);
+            }
+
+            string scopeName = _registryOptions.GetScopeByLanguageId(language.Id);
+
+            _textMateInstallation.SetGrammar(null);
+            _textEditor.Document = new TextDocument(ResourceLoader.LoadSampleFile(scopeName));
+            _textMateInstallation.SetGrammar(scopeName);
+
+            if (language.Id == "xml")
+            {
+                _foldingManager = FoldingManager.Install(_textEditor.TextArea);
+
+                var strategy = new XmlFoldingStrategy();
+                strategy.UpdateFoldings(_foldingManager, _textEditor.Document);
+                return;
+            }
+        }
+
+        private void ChangeThemeButton_Click(object sender, RoutedEventArgs e)
+        {
+            _currentTheme = (_currentTheme + 1) % Enum.GetNames(typeof(ThemeName)).Length;
+
+            _textMateInstallation.SetTheme(_registryOptions.LoadTheme(
+                (ThemeName)_currentTheme));
+        }
+
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
         }
 
-        void _addControlBtn_Click(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void AddControlButton_Click(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             _generator.controls.Add(new Pair(_textEditor.CaretOffset, new Button() { Content = "Click me" }));
             _textEditor.TextArea.TextView.Redraw();
         }
 
-        void _clearControlBtn_Click(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void ClearControlButton_Click(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             //TODO: delete elements using back key
             _generator.controls.Clear();
             _textEditor.TextArea.TextView.Redraw();
         }
 
-        void textEditor_TextArea_TextEntering(object sender, TextInputEventArgs e)
+        private void textEditor_TextArea_TextEntering(object sender, TextInputEventArgs e)
         {
             if (e.Text.Length > 0 && _completionWindow != null)
             {
@@ -95,7 +185,7 @@ namespace AvaloniaEdit.Demo
             // We still want to insert the character that was typed.
         }
 
-        void textEditor_TextArea_TextEntered(object sender, TextInputEventArgs e)
+        private void textEditor_TextArea_TextEntered(object sender, TextInputEventArgs e)
         {
             if (e.Text == ".")
             {

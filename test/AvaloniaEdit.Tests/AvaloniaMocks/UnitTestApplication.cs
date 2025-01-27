@@ -5,6 +5,7 @@ using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Platform;
 using Avalonia.Styling;
@@ -52,9 +53,12 @@ namespace AvaloniaEdit.AvaloniaMocks
                 .Bind<IPlatformRenderInterface>().ToConstant(Services.RenderInterface)
                 .Bind<IPlatformThreadingInterface>().ToConstant(Services.ThreadingInterface)
                 .Bind<IScheduler>().ToConstant(Services.Scheduler)
-                .Bind<IStandardCursorFactory>().ToConstant(Services.StandardCursorFactory)
+                .Bind<ICursorFactory>().ToConstant(Services.StandardCursorFactory)
                 .Bind<IStyler>().ToConstant(Services.Styler)
-                .Bind<IWindowingPlatform>().ToConstant(Services.WindowingPlatform);
+                .Bind<IWindowingPlatform>().ToConstant(Services.WindowingPlatform)
+                .Bind<PlatformHotkeyConfiguration>().ToConstant(Services.PlatformHotkeyConfiguration)
+                .Bind<IFontManagerImpl>().ToConstant(Services.FontManagerImpl)
+                .Bind<IFormattedTextImpl>().ToConstant(Services.FormattedTextImpl);
             var styles = Services.Theme?.Invoke();
 
             if (styles != null)

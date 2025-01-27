@@ -307,9 +307,9 @@ namespace AvaloniaEdit.Document
                 }
                 finally
                 {
-                    State = StateListen;
                     FileModified(-1);
                     CallEndUpdateOnAffectedDocuments();
+                    State = StateListen;
                 }
                 RecalcIsOriginalFile();
                 if (_undostack.Count == 0)
@@ -346,9 +346,9 @@ namespace AvaloniaEdit.Document
                 }
                 finally
                 {
-                    State = StateListen;
                     FileModified(1);
                     CallEndUpdateOnAffectedDocuments();
+                    State = StateListen;
                 }
                 RecalcIsOriginalFile();
                 if (_redostack.Count == 0)
@@ -370,9 +370,9 @@ namespace AvaloniaEdit.Document
         /// Call this method to push an UndoableOperation on the undostack.
         /// The redostack will be cleared if you use this method.
         /// </summary>
-        public void Push(IUndoableOperation operation, bool pushBack = true)
+        public void Push(IUndoableOperation operation)
         {
-            Push(operation, false, pushBack);
+            Push(operation, false);
         }
 
         /// <summary>
@@ -382,14 +382,14 @@ namespace AvaloniaEdit.Document
         /// Use this method to store the caret position/selection on the undo stack to
         /// prevent having only actions that affect only the caret and not the document.
         /// </summary>
-        public void PushOptional(IUndoableOperation operation, bool pushBack = true)
+        public void PushOptional(IUndoableOperation operation)
         {
             if (_undoGroupDepth == 0)
                 throw new InvalidOperationException("Cannot use PushOptional outside of undo group");
-            Push(operation, true, pushBack);
+            Push(operation, true);
         }
 
-        private void Push(IUndoableOperation operation, bool isOptional, bool pushBack)
+        private void Push(IUndoableOperation operation, bool isOptional)
         {
             if (operation == null)
             {
@@ -402,16 +402,7 @@ namespace AvaloniaEdit.Document
 
                 var needsUndoGroup = _undoGroupDepth == 0;
                 if (needsUndoGroup) StartUndoGroup();
-
-                if (pushBack)
-                {
-                    _undostack.PushBack(operation);
-                }
-                else
-                {
-                    _undostack.PushFront(operation);
-                }
-
+                _undostack.PushBack(operation);
                 _actionCountInUndoGroup++;
                 if (isOptional)
                     _optionalActionCount++;

@@ -16,6 +16,7 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+using AvaloniaEdit.Utils;
 using System;
 using System.ComponentModel;
 using System.Reflection;
@@ -321,13 +322,13 @@ namespace AvaloniaEdit
             }
         }
 
-        private bool _allowScrollBelowDocument;
+        private bool _allowScrollBelowDocument = true;
 
         /// <summary>
         /// Gets/Sets whether the user can scroll below the bottom of the document.
-        /// The default value is false; but it a good idea to set this property to true when using folding.
+        /// The default value is true; but it a good idea to set this property to true when using folding.
         /// </summary>
-        [DefaultValue(false)]
+        [DefaultValue(true)]
         public virtual bool AllowScrollBelowDocument
         {
             get { return _allowScrollBelowDocument; }
@@ -558,5 +559,24 @@ namespace AvaloniaEdit
                 }
             }
         }
+
+        private double _defaultLineSpacingPercentage = 1.0;
+
+        /// <summary>
+        /// Gets/Sets the default line spacing percentage
+        /// </summary>
+        [DefaultValue(1.0)]
+        public double DefaultLineSpacingPercentage
+		{
+            get => _defaultLineSpacingPercentage;
+            set
+			{
+                if(!_defaultLineSpacingPercentage.IsClose(value))
+				{
+                    _defaultLineSpacingPercentage = value;
+                    OnPropertyChanged(nameof(DefaultLineSpacingPercentage));
+				}
+			}
+		}
     }
 }

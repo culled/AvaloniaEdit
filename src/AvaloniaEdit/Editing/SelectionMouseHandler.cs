@@ -16,20 +16,20 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+using Avalonia;
+using Avalonia.Input;
+using AvaloniaEdit.Document;
+using AvaloniaEdit.Utils;
 using System;
 using System.ComponentModel;
 using System.Linq;
-using Avalonia;
-using AvaloniaEdit.Document;
-using AvaloniaEdit.Utils;
-using Avalonia.Input;
 
 namespace AvaloniaEdit.Editing
 {
     /// <summary>
     /// Handles selection of text using the mouse.
     /// </summary>
-    public sealed class SelectionMouseHandler : ITextAreaInputHandler
+    internal sealed class SelectionMouseHandler : ITextAreaInputHandler
     {
         #region enum SelectionMode
 
@@ -70,7 +70,6 @@ namespace AvaloniaEdit.Editing
         private SelectionMode _mode;
         private AnchorSegment _startWord;
         private Point _possibleDragStartMousePos;
-        private PointerPressedEventArgs _lastPressEventArgs;
 
         #region Constructor + Attach + Detach
         public SelectionMouseHandler(TextArea textArea)
@@ -87,8 +86,6 @@ namespace AvaloniaEdit.Editing
             TextArea.PointerReleased += TextArea_MouseLeftButtonUp;
             //textArea.QueryCursor += textArea_QueryCursor;
             TextArea.OptionChanged += TextArea_OptionChanged;
-			TextArea.Tapped += TextArea_Tapped;
-			TextArea.DoubleTapped += TextArea_DoubleTapped;
 
             _enableTextDragDrop = TextArea.Options.EnableTextDragDrop;
             if (_enableTextDragDrop)
@@ -97,15 +94,12 @@ namespace AvaloniaEdit.Editing
             }
         }
 
-		public void Detach()
+        public void Detach()
         {
             _mode = SelectionMode.None;
             TextArea.PointerPressed -= TextArea_MouseLeftButtonDown;
             TextArea.PointerMoved -= TextArea_MouseMove;
             TextArea.PointerReleased -= TextArea_MouseLeftButtonUp;
-            TextArea.DoubleTapped -= TextArea_DoubleTapped;
-            TextArea.Tapped -= TextArea_Tapped;
-
             //textArea.QueryCursor -= textArea_QueryCursor;
             TextArea.OptionChanged -= TextArea_OptionChanged;
             if (_enableTextDragDrop)
@@ -398,124 +392,130 @@ namespace AvaloniaEdit.Editing
 
         private void TextArea_MouseLeftButtonDown(object sender, PointerPressedEventArgs e)
         {
-            var pointer = e.GetCurrentPoint(TextArea);
-
-            TextArea.Cursor = Cursor.Parse("IBeam");
-
-            _mode = SelectionMode.None;
-            if (!e.Handled)
+            if (e.GetCurrentPoint(TextArea).Properties.IsLeftButtonPressed == false)
             {
-                var modifiers = e.KeyModifiers;
-                var shift = modifiers.HasFlag(KeyModifiers.Shift);
-                if (_enableTextDragDrop && !shift)
+                if (TextArea.RightClickMovesCaret == true && e.Handled == false)
                 {
-                    var offset = GetOffsetFromMousePosition(e, out _, out _);
-                    if (TextArea.Selection.Contains(offset))
-                    {
-                        if (TextArea.CapturePointer(e.Pointer))
-                        {
-                            _mode = SelectionMode.PossibleDragStart;
-                            _possibleDragStartMousePos = e.GetPosition(TextArea);
-                        }
-                        e.Handled = true;
-                        return;
-                    }
-                }
-
-                var oldPosition = TextArea.Caret.Position;
-
-                if(pointer.Properties.IsLeftButtonPressed || TextArea.Selection is not RectangleSelection)
                     SetCaretOffsetToMousePosition(e);
-
-                if (!shift && !pointer.Properties.IsRightButtonPressed)
-                {
-                    TextArea.ClearSelection();
                 }
+            }
+            else
+            {
+                TextArea.Cursor = Cursor.Parse("IBeam");
 
-                if (TextArea.CapturePointer(e.Pointer))
+                var pointer = e.GetCurrentPoint(TextArea);
+
+                _mode = SelectionMode.None;
+                if (!e.Handled)
                 {
-                    if (modifiers.HasFlag(KeyModifiers.Alt) && TextArea.Options.EnableRectangularSelection)
+                    var modifiers = e.KeyModifiers;
+                    var shift = modifiers.HasFlag(KeyModifiers.Shift);
+                    if (_enableTextDragDrop && e.ClickCount == 1 && !shift)
                     {
-                        _mode = SelectionMode.Rectangular;
-                        if (shift && TextArea.Selection is RectangleSelection)
+                        var offset = GetOffsetFromMousePosition(e, out _, out _);
+                        if (TextArea.Selection.Contains(offset))
                         {
-                            TextArea.Selection = TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, TextArea.Caret.Position);
-                        }
-                    }
-                    else if (modifiers.HasFlag(KeyModifiers.Control) && e.ClickCount == 1) // e.ClickCount == 1
-                    {
-                        _mode = SelectionMode.WholeWord;
-                        if (shift && !(TextArea.Selection is RectangleSelection))
-                        {
-                            TextArea.Selection = TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, TextArea.Caret.Position);
-                        }
-                    }
-                    else if(pointer.Properties.IsLeftButtonPressed && e.ClickCount == 1) // e.ClickCount == 1
-                    {
-                        _mode = SelectionMode.Normal;
-                        if (shift && !(TextArea.Selection is RectangleSelection))
-                        {
-                            TextArea.Selection = TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, TextArea.Caret.Position);
-                        }
-                    }
-                    else if(pointer.Properties.IsLeftButtonPressed)
-                    {
-                        SimpleSegment startWord;
-
-                        _mode = SelectionMode.WholeWord;
-                        startWord = GetWordAtMousePosition(e);
-                         
-                        if (e.ClickCount == 3)
-                        {
-                            _mode = SelectionMode.WholeLine;
-                            startWord = GetLineAtMousePosition(e);
-                        }
-                        else
-                        {
-                           _mode = SelectionMode.WholeWord;
-                            startWord = GetWordAtMousePosition(e);                           
-                        }
-                        
-                        if (startWord == SimpleSegment.Invalid)
-                        {
-                            _mode = SelectionMode.None;
-                            TextArea.ReleasePointerCapture(e.Pointer);
+                            if (TextArea.CapturePointer(e.Pointer))
+                            {
+                                _mode = SelectionMode.PossibleDragStart;
+                                _possibleDragStartMousePos = e.GetPosition(TextArea);
+                            }
+                            e.Handled = true;
                             return;
                         }
-                        if (shift && !TextArea.Selection.IsEmpty)
+                    }
+
+                    var oldPosition = TextArea.Caret.Position;
+                    SetCaretOffsetToMousePosition(e);
+
+
+                    if (!shift)
+                    {
+                        TextArea.ClearSelection();
+                    }
+
+                    if (TextArea.CapturePointer(e.Pointer))
+                    {
+                        if (modifiers.HasFlag(KeyModifiers.Alt) && TextArea.Options.EnableRectangularSelection)
                         {
-                            if (startWord.Offset < TextArea.Selection.SurroundingSegment.Offset)
+                            _mode = SelectionMode.Rectangular;
+                            if (shift && TextArea.Selection is RectangleSelection)
                             {
-                                TextArea.Selection = TextArea.Selection.SetEndpoint(new TextViewPosition(TextArea.Document.GetLocation(startWord.Offset)));
+                                TextArea.Selection = TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, TextArea.Caret.Position);
                             }
-                            else if (startWord.EndOffset > TextArea.Selection.SurroundingSegment.EndOffset)
+                        }
+                        else if (modifiers.HasFlag(KeyModifiers.Control) && e.ClickCount == 1) // e.ClickCount == 1
+                        {
+                            _mode = SelectionMode.WholeWord;
+                            if (shift && !(TextArea.Selection is RectangleSelection))
                             {
-                                TextArea.Selection = TextArea.Selection.SetEndpoint(new TextViewPosition(TextArea.Document.GetLocation(startWord.EndOffset)));
+                                TextArea.Selection = TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, TextArea.Caret.Position);
                             }
-                            _startWord = new AnchorSegment(TextArea.Document, TextArea.Selection.SurroundingSegment);
+                        }
+                        else if (pointer.Properties.IsLeftButtonPressed && e.ClickCount == 1) // e.ClickCount == 1
+                        {
+                            _mode = SelectionMode.Normal;
+                            if (shift && !(TextArea.Selection is RectangleSelection))
+                            {
+                                TextArea.Selection = TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, TextArea.Caret.Position);
+                            }
                         }
                         else
                         {
-                            TextArea.Selection = Selection.Create(TextArea, startWord.Offset, startWord.EndOffset);
-                            _startWord = new AnchorSegment(TextArea.Document, startWord.Offset, startWord.Length);
+                            SimpleSegment startWord;
+
+                            _mode = SelectionMode.WholeWord;
+                            startWord = GetWordAtMousePosition(e);
+
+                            if (e.ClickCount == 3)
+                            {
+                                _mode = SelectionMode.WholeLine;
+                                startWord = GetLineAtMousePosition(e);
+                            }
+                            else
+                            {
+                                _mode = SelectionMode.WholeWord;
+                                startWord = GetWordAtMousePosition(e);
+                            }
+
+                            if (startWord == SimpleSegment.Invalid)
+                            {
+                                _mode = SelectionMode.None;
+                                TextArea.ReleasePointerCapture(e.Pointer);
+                                return;
+                            }
+                            if (shift && !TextArea.Selection.IsEmpty)
+                            {
+                                if (startWord.Offset < TextArea.Selection.SurroundingSegment.Offset)
+                                {
+                                    TextArea.Selection = TextArea.Selection.SetEndpoint(new TextViewPosition(TextArea.Document.GetLocation(startWord.Offset)));
+                                }
+                                else if (startWord.EndOffset > TextArea.Selection.SurroundingSegment.EndOffset)
+                                {
+                                    TextArea.Selection = TextArea.Selection.SetEndpoint(new TextViewPosition(TextArea.Document.GetLocation(startWord.EndOffset)));
+                                }
+                                _startWord = new AnchorSegment(TextArea.Document, TextArea.Selection.SurroundingSegment);
+                            }
+                            else
+                            {
+                                TextArea.Selection = Selection.Create(TextArea, startWord.Offset, startWord.EndOffset);
+                                _startWord = new AnchorSegment(TextArea.Document, startWord.Offset, startWord.Length);
+                            }
                         }
                     }
+                    e.Handled = true;
                 }
-				e.Handled = true;
-			}
+            }
+
         }
         #endregion
 
         #region LeftButtonClick
-        private void TextArea_Tapped(object sender, Avalonia.Interactivity.RoutedEventArgs e)
-        {
-        }
+
         #endregion
 
         #region LeftButtonDoubleTap
-        private void TextArea_DoubleTapped(object sender, Avalonia.Interactivity.RoutedEventArgs e)
-        {
-        }
+
         #endregion
 
         #region Mouse Position <-> Text coordinates
@@ -529,7 +529,7 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
+            pos -= textView.DocumentBounds.TopLeft;
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null)
             {
@@ -560,7 +560,7 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
+            pos -= textView.DocumentBounds.TopLeft;
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             return line != null
                 ? new SimpleSegment(line.StartOffset, line.LastDocumentLine.EndOffset - line.StartOffset)
@@ -581,9 +581,11 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
-            if (pos.Y >= textView.DocumentHeight)
-                pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            pos -= textView.DocumentBounds.TopLeft;
+            //if (pos.Y >= textView.DocumentHeight)
+                //pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            if (pos.Y >= textView.DocumentBounds.Bottom)
+                pos = pos.WithY(textView.DocumentBounds.Bottom - ExtensionMethods.Epsilon);
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null)
             {
@@ -603,9 +605,11 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
-            if (pos.Y >= textView.DocumentHeight)
-                pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            pos -= textView.DocumentBounds.TopLeft;
+            //if (pos.Y >= textView.DocumentHeight)
+            //    pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            if (pos.Y >= textView.DocumentBounds.Bottom)
+                pos = pos.WithY(textView.DocumentBounds.Bottom - ExtensionMethods.Epsilon);
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null)
             {
@@ -695,7 +699,7 @@ namespace AvaloniaEdit.Editing
             else if (_mode == SelectionMode.WholeWord || _mode == SelectionMode.WholeLine)
             {
                 var newWord = (_mode == SelectionMode.WholeLine) ? GetLineAtMousePosition(e) : GetWordAtMousePosition(e);
-                if (newWord != SimpleSegment.Invalid &&_startWord != null)
+                if (newWord != SimpleSegment.Invalid && _startWord != null)
                 {
                     TextArea.Selection = Selection.Create(TextArea,
                                                           Math.Min(newWord.Offset, _startWord.Offset),
@@ -710,12 +714,11 @@ namespace AvaloniaEdit.Editing
 
         #region MouseLeftButtonUp
 
-        private void TextArea_MouseLeftButtonUp(object sender, PointerReleasedEventArgs e)
+        private void TextArea_MouseLeftButtonUp(object sender, PointerEventArgs e)
         {
-            if (_mode == SelectionMode.None || e.Handled || e.InitialPressMouseButton == MouseButton.Right)
+            if (_mode == SelectionMode.None || e.Handled)
                 return;
             e.Handled = true;
-
             switch (_mode)
             {
                 case SelectionMode.PossibleDragStart:

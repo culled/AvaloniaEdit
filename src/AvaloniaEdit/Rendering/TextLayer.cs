@@ -18,7 +18,6 @@
 
 using System.Collections.Generic;
 using Avalonia;
-using Avalonia.Media;
 
 namespace AvaloniaEdit.Rendering
 {
@@ -79,13 +78,5 @@ namespace AvaloniaEdit.Rendering
             base.ArrangeCore(finalRect);
             TextView.ArrangeTextLayer(_visuals);
         }
-
-		public override void Render(DrawingContext context)
-		{
-            foreach (var line in _visuals)
-			{
-                line.InvalidateVisual();
-			}
-		}
-	}
+    }
 }

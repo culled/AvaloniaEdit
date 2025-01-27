@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using Avalonia;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Rendering;
@@ -19,14 +21,14 @@ namespace AvaloniaEdit.AvaloniaMocks
     {
         public static readonly TestServices StyledWindow = new TestServices(
             assetLoader: new AssetLoader(),
-            layoutManager: new LayoutManager(),
             platform: new AppBuilder().RuntimePlatform,
             renderInterface: new MockPlatformRenderInterface(),
-            standardCursorFactory: Mock.Of<IStandardCursorFactory>(),
+            standardCursorFactory: Mock.Of<ICursorFactory>(),
             styler: new Styler(),
             theme: () => CreateDefaultTheme(),
             threadingInterface: Mock.Of<IPlatformThreadingInterface>(x => x.CurrentThreadIsLoopThread == true),
-            windowingPlatform: new MockWindowingPlatform());
+            windowingPlatform: new MockWindowingPlatform(),
+            fontManagerImpl: new MockFontManagerImpl());
 
         public static readonly TestServices MockPlatformRenderInterface = new TestServices(
             renderInterface: new MockPlatformRenderInterface());
@@ -49,9 +51,6 @@ namespace AvaloniaEdit.AvaloniaMocks
             keyboardNavigation: new KeyboardNavigationHandler(),
             inputManager: new InputManager());
 
-        public static readonly TestServices RealLayoutManager = new TestServices(
-            layoutManager: new LayoutManager());
-
         public static readonly TestServices RealStyler = new TestServices(
             styler: new Styler());
 
@@ -67,12 +66,15 @@ namespace AvaloniaEdit.AvaloniaMocks
             IPlatformRenderInterface renderInterface = null,
             IRenderLoop renderLoop = null,
             IScheduler scheduler = null,
-            IStandardCursorFactory standardCursorFactory = null,
+            ICursorFactory standardCursorFactory = null,
             IStyler styler = null,
             Func<Styles> theme = null,
             IPlatformThreadingInterface threadingInterface = null,
             IWindowImpl windowImpl = null,
-            IWindowingPlatform windowingPlatform = null)
+            IWindowingPlatform windowingPlatform = null,
+            PlatformHotkeyConfiguration platformHotkeyConfiguration = null,
+            IFontManagerImpl fontManagerImpl = null,
+            IFormattedTextImpl formattedTextImpl = null)
         {
             AssetLoader = assetLoader;
             FocusManager = focusManager;
@@ -90,6 +92,9 @@ namespace AvaloniaEdit.AvaloniaMocks
             ThreadingInterface = threadingInterface;
             WindowImpl = windowImpl;
             WindowingPlatform = windowingPlatform;
+            PlatformHotkeyConfiguration = platformHotkeyConfiguration;
+            FontManagerImpl = fontManagerImpl;
+            FormattedTextImpl = formattedTextImpl;
         }
 
         public IAssetLoader AssetLoader { get; }
@@ -102,12 +107,15 @@ namespace AvaloniaEdit.AvaloniaMocks
         public IRuntimePlatform Platform { get; }
         public IPlatformRenderInterface RenderInterface { get; }
         public IScheduler Scheduler { get; }
-        public IStandardCursorFactory StandardCursorFactory { get; }
+        public ICursorFactory StandardCursorFactory { get; }
         public IStyler Styler { get; }
         public Func<Styles> Theme { get; }
         public IPlatformThreadingInterface ThreadingInterface { get; }
         public IWindowImpl WindowImpl { get; }
         public IWindowingPlatform WindowingPlatform { get; }
+        public PlatformHotkeyConfiguration PlatformHotkeyConfiguration { get; }
+        public IFontManagerImpl FontManagerImpl { get; }
+        public IFormattedTextImpl FormattedTextImpl { get;  }
 
         public TestServices With(
             IAssetLoader assetLoader = null,
@@ -121,12 +129,15 @@ namespace AvaloniaEdit.AvaloniaMocks
             IPlatformRenderInterface renderInterface = null,
             IRenderLoop renderLoop = null,
             IScheduler scheduler = null,
-            IStandardCursorFactory standardCursorFactory = null,
+            ICursorFactory standardCursorFactory = null,
             IStyler styler = null,
             Func<Styles> theme = null,
             IPlatformThreadingInterface threadingInterface = null,
             IWindowImpl windowImpl = null,
-            IWindowingPlatform windowingPlatform = null)
+            IWindowingPlatform windowingPlatform = null,
+            PlatformHotkeyConfiguration platformHotkeyConfiguration = null,
+            IFontManagerImpl fontManagerImpl = null,
+            IFormattedTextImpl formattedTextImpl = null)
         {
             return new TestServices(
                 assetLoader: assetLoader ?? AssetLoader,
@@ -144,7 +155,10 @@ namespace AvaloniaEdit.AvaloniaMocks
                 theme: theme ?? Theme,
                 threadingInterface: threadingInterface ?? ThreadingInterface,
                 windowingPlatform: windowingPlatform ?? WindowingPlatform,
-                windowImpl: windowImpl ?? WindowImpl);
+                windowImpl: windowImpl ?? WindowImpl,
+                platformHotkeyConfiguration: platformHotkeyConfiguration ?? PlatformHotkeyConfiguration,
+                fontManagerImpl: fontManagerImpl ?? FontManagerImpl,
+                formattedTextImpl : formattedTextImpl ?? FormattedTextImpl);
         }
 
         private static Styles CreateDefaultTheme()
@@ -153,11 +167,6 @@ namespace AvaloniaEdit.AvaloniaMocks
             {
                 new DefaultTheme(),
             };
-
-            var loader = new AvaloniaXamlLoader();
-            var baseLight = (IStyle)loader.Load(
-                new Uri("resm:Avalonia.Themes.Default.Accents.BaseLight.xaml?assembly=Avalonia.Themes.Default"));
-            result.Add(baseLight);
 
             return result;
         }
@@ -168,6 +177,7 @@ namespace AvaloniaEdit.AvaloniaMocks
                 x.CreateFormattedText(
                     It.IsAny<string>(),
                     It.IsAny<Typeface>(),
+                    It.IsAny<double>(),
                     It.IsAny<TextAlignment>(),
                     It.IsAny<TextWrapping>(),
                     It.IsAny<Size>(),

@@ -260,7 +260,7 @@ namespace AvaloniaEdit.Document
         /// <summary>
         /// The text that was inserted.
         /// </summary>
-        public ITextSource InsertedText { get; set; }
+        public ITextSource InsertedText { get; }
 
         /// <summary>
         /// The number of characters inserted.

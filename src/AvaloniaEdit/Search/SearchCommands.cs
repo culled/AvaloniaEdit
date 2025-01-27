@@ -101,12 +101,9 @@ namespace AvaloniaEdit.Search
         private void FindOrReplace(bool isReplaceMode)
         {
             _panel.IsReplaceMode = isReplaceMode;
-
             _panel.Open();
-
             if (!(TextArea.Selection.IsEmpty || TextArea.Selection.IsMultiline))
                 _panel.SearchPattern = TextArea.Selection.GetText();
-
             Dispatcher.UIThread.Post(_panel.Reactivate, DispatcherPriority.Input);
         }
 

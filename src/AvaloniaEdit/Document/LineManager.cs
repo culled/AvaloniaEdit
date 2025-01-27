@@ -181,22 +181,14 @@ namespace AvaloniaEdit.Document
             //startLine.MergedWith(endLine, offset - startLineOffset);
 
             // remove all lines between startLine (excl.) and endLine (incl.)
-            var tmp = endLine;
-            DocumentLine lineToRemove;
-            do
-            {
-                lineToRemove = tmp;
-                tmp = tmp.PreviousLine;
-                RemoveLine(lineToRemove);
-            } while (tmp != startLine);
-            /*var tmp = startLine.NextLine;
+            var tmp = startLine.NextLine;
             DocumentLine lineToRemove;
             do
             {
                 lineToRemove = tmp;
                 tmp = tmp.NextLine;
                 RemoveLine(lineToRemove);
-            } while (lineToRemove != endLine);*/
+            } while (lineToRemove != endLine);
 
             SetLineLength(startLine, startLine.TotalLength - charactersRemovedInStartLine + charactersLeftInEndLine);
         }

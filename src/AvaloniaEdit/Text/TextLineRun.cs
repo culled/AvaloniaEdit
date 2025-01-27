@@ -1,24 +1,29 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Media.TextFormatting;
+using Avalonia.Media.TextFormatting.Unicode;
+using Avalonia.Utilities;
+
+using AvaloniaEdit.Rendering;
 
 namespace AvaloniaEdit.Text
 {
     internal sealed class TextLineRun
     {
         private const string NewlineString = "\r\n";
-        internal const double BaselineFactor = 0.1;
-        internal const double HeightFactor = 1.2;
+        private const string TabString = "\t";
 
         private FormattedText _formattedText;
         private Size _formattedTextSize;
-        private double[] _glyphWidths;
-
+        private IReadOnlyList<double> _glyphWidths;
         public StringRange StringRange { get; private set; }
 
         public int Length { get; set; }
-
-        public int LastWhitespaceIndex { get; set; }
 
         public double Width { get; private set; }
 
@@ -38,12 +43,16 @@ namespace AvaloniaEdit.Text
                 {
                     return 0.0;
                 }
+
+                double defaultBaseLine = GetDefaultBaseline(TextRun.Properties.FontMetrics);
+
                 if (IsEmbedded && TextRun is TextEmbeddedObject embeddedObject)
                 {
                     var box = embeddedObject.ComputeBoundingBox();
-                    return box.Y;
+                    return defaultBaseLine - box.Y;
                 }
-                return FontSize * BaselineFactor;
+
+                return defaultBaseLine;
             }
         }
 
@@ -51,17 +60,37 @@ namespace AvaloniaEdit.Text
         {
             get
             {
-                if(IsEnd)
+                if (IsEnd)
                 {
                     return 0.0;
                 }
-                if(IsEmbedded && TextRun is TextEmbeddedObject embeddedObject)
+
+                if (IsEmbedded && TextRun is TextEmbeddedObject embeddedObject)
                 {
                     var box = embeddedObject.ComputeBoundingBox();
                     return box.Height;
                 }
-                return FontSize * HeightFactor;
+
+                if (_formattedText == null)
+				{
+                    return GetDefaultLineHeight(TextRun.Properties.FontMetrics);
+                }
+                //return GetDefaultLineHeight(TextRun.Properties.FontMetrics);
+                return _formattedTextSize.Height;
             }
+        }
+
+        public static double GetDefaultLineHeight(FontMetrics fontMetrics)
+        {
+            // adding an extra 15% of the line height look good across different font sizes
+            // double extraLineHeight = fontMetrics.LineHeight * 0.15;
+            // return fontMetrics.LineHeight + extraLineHeight;
+            return fontMetrics.LineHeight;
+        }
+
+        public static double GetDefaultBaseline(FontMetrics fontMetrics)
+        {
+            return Math.Abs(fontMetrics.Ascent);
         }
 
         public Typeface Typeface => TextRun.Properties.Typeface;
@@ -72,19 +101,32 @@ namespace AvaloniaEdit.Text
         {
         }
 
-        public static TextLineRun Create(TextSource textSource, int index, int firstIndex, double lengthLeft)
+        public static TextLineRun Create(TextSource textSource, int index, int firstIndex, double lengthLeft, TextParagraphProperties paragraphProperties)
         {
             var textRun = textSource.GetTextRun(index);
             var stringRange = textRun.GetStringRange();
-            return Create(textSource, stringRange, textRun, index, lengthLeft);
+
+            switch(paragraphProperties.TextCasing)
+			{
+                case Document.DocumentLineFormat.TextCasingMode.AllLower:
+                    stringRange = stringRange.AsLower();
+                    break;
+                case Document.DocumentLineFormat.TextCasingMode.AllUpper:
+                    stringRange = stringRange.AsUpper();
+                    break;
+                default:
+                    break;
+			}
+
+            return Create(textSource, stringRange, textRun, index, lengthLeft, paragraphProperties);
         }
 
-        private static TextLineRun Create(TextSource textSource, StringRange stringRange, TextRun textRun, int index, double widthLeft)
+        private static TextLineRun Create(TextSource textSource, StringRange stringRange, TextRun textRun, int index, double widthLeft, TextParagraphProperties paragraphProperties)
         {
             if (textRun is TextCharacters)
             {
-                return CreateRunForEol(textSource, stringRange, textRun, index) ??
-                       CreateRunForText(stringRange, textRun, widthLeft, false, true);
+                return CreateRunForSpecialChars(textSource, stringRange, textRun, index, paragraphProperties) ??
+                       CreateRunForText(stringRange, textRun, widthLeft, paragraphProperties);
             }
 
             if (textRun is TextEndOfLine)
@@ -95,7 +137,8 @@ namespace AvaloniaEdit.Text
             if (textRun is TextEmbeddedObject embeddedObject)
             {
                 double width = embeddedObject.GetSize(double.PositiveInfinity).Width;
-                return new TextLineRun(textRun.Length, textRun) {
+                return new TextLineRun(textRun.Length, textRun)
+                {
                     IsEmbedded = true,
                     _glyphWidths = new double[] { width },
                     // Embedded objects must propagate their width to the container.
@@ -107,7 +150,7 @@ namespace AvaloniaEdit.Text
             throw new NotSupportedException("Unsupported run type");
         }
 
-        private static TextLineRun CreateRunForEol(TextSource textSource, StringRange stringRange, TextRun textRun, int index)
+        private static TextLineRun CreateRunForSpecialChars(TextSource textSource, StringRange stringRange, TextRun textRun, int index, TextParagraphProperties paragraphProperties)
         {
             switch (stringRange[0])
             {
@@ -132,110 +175,133 @@ namespace AvaloniaEdit.Text
                 case '\n':
                     return new TextLineRun(1, textRun) { IsEnd = true };
                 case '\t':
-                    return CreateRunForTab(textRun);
+                    return CreateRunForTab(textRun, paragraphProperties);
                 default:
                     return null;
             }
         }
 
-        private static TextLineRun CreateRunForTab(TextRun textRun)
+        private static TextLineRun CreateRunForTab(TextRun textRun, TextParagraphProperties paragraphProperties)
         {
-            var spaceRun = new TextCharacters(" ", textRun.Properties);
-            var stringRange = spaceRun.StringRange;
-            var run = new TextLineRun(1, spaceRun)
+            var tabRun = new TextCharacters(TabString, textRun.Properties);
+            var stringRange = tabRun.StringRange;
+            var run = new TextLineRun(1, tabRun)
             {
                 IsTab = true,
                 StringRange = stringRange,
-                // TODO: get from para props
-                Width = 40
+                Width = paragraphProperties.DefaultIncrementalTab
             };
 
-            run.SetGlyphWidths();
+            run._glyphWidths = new double[] { run.Width };
 
             return run;
         }
 
-        internal static TextLineRun CreateRunForText(StringRange stringRange, TextRun textRun, double widthLeft, bool emergencyWrap, bool breakOnTabs)
+        internal static TextLineRun CreateRunForText(
+            StringRange stringRange,
+            TextRun textRun,
+            double widthLeft,
+            TextParagraphProperties paragraphProperties)
         {
-            var tf = textRun.Properties.Typeface;
-            var formattedText = new FormattedText
-            {
-                Text = stringRange.ToString(),
-                Typeface = new Typeface(tf.FontFamily, tf.Style, tf.Weight),
-                FontSize = textRun.Properties.FontSize
-            };
+            TextLineRun run = CreateTextLineRun(stringRange, textRun, textRun.Length, paragraphProperties);
 
-            double x = 0;
-            int offset = 0;
-            int lastWhitespaceIndex = -1;
+            //We should always test for line wrapping as the wrapping text may be composed of many segments
+            TextLineRun wrapped = PerformTextWrapping(run, widthLeft, paragraphProperties);
 
-            //Measure the width of the text that would fit in the space left
-            while (x <= widthLeft && offset < textRun.Length)
-            {
-                x += formattedText.HitTestTextPosition(offset).Width;
+            if (wrapped == null) return run;
 
-                if (x <= widthLeft)
-                {
-                    if (char.IsWhiteSpace(stringRange[offset]))
-                    {
-                        lastWhitespaceIndex = offset;
-                    }
+            wrapped.Width = widthLeft;
+            return wrapped;
+        }
 
-                    offset++;
-                }
-            }
-
-            //Wrap at the last letter if there was no whitespace in the run
-            if(lastWhitespaceIndex == -1 && x > widthLeft)
-			{
-                lastWhitespaceIndex = offset;
-            }
-
+        private static TextLineRun CreateTextLineRun(StringRange stringRange, TextRun textRun, int length, TextParagraphProperties paragraphProperties)
+        {
             var run = new TextLineRun
             {
                 StringRange = stringRange,
                 TextRun = textRun,
-                Length = textRun.Length,
-                LastWhitespaceIndex = lastWhitespaceIndex
+                Length = length
+            };
+
+            var tf = run.Typeface;
+
+            var formattedText = new FormattedText
+            {
+                Text = stringRange.ToString(run.Length),
+                Typeface = new Typeface(tf.FontFamily, tf.Style, tf.Weight),
+                FontSize = run.FontSize
             };
 
             run._formattedText = formattedText;
 
             var size = formattedText.Bounds.Size;
+
             run._formattedTextSize = size;
 
             run.Width = size.Width;
 
-            run.SetGlyphWidths();
+            run._glyphWidths = new GlyphWidths(
+                run.StringRange,
+                run.Typeface.GlyphTypeface,
+                run.FontSize,
+                paragraphProperties.DefaultIncrementalTab);
 
             return run;
+        }
+
+        private static TextLineRun PerformTextWrapping(TextLineRun run, double widthLeft, TextParagraphProperties paragraphProperties)
+        {
+            var extendedStringRange = new StringRange(run.StringRange.String, run.StringRange.OffsetToFirstChar, run.StringRange.String.Length - run.StringRange.OffsetToFirstChar);
+            var extendedRun = CreateTextLineRun(extendedStringRange, run.TextRun, extendedStringRange.Length, paragraphProperties);
+
+            (int firstIndex, int trailingLength) extendedCharacterHit = extendedRun.GetCharacterFromDistance(widthLeft);
+            
+            //Don't wrap if this line didn't take up the full space
+            if (extendedCharacterHit.firstIndex == extendedRun.Length - 1) return null;
+
+            (int firstIndex, int trailingLength) characterHit = run.GetCharacterFromDistance(widthLeft);
+
+            int extendedLenForTextWrapping = FindPositionForTextWrapping(extendedRun.StringRange, extendedCharacterHit.firstIndex);
+            int lenForTextWrapping = FindPositionForTextWrapping(run.StringRange, characterHit.firstIndex);
+
+            //Don't wrap if the actual run wouldn't wrap at the extended point and that the run doesn't end at the extended wrap point
+            if (extendedLenForTextWrapping != lenForTextWrapping && run.Length != extendedLenForTextWrapping) return null;
+
+            return CreateTextLineRun(
+                run.StringRange.WithLength(lenForTextWrapping),
+                run.TextRun,
+                lenForTextWrapping,
+                paragraphProperties);
+        }
+
+        private static int FindPositionForTextWrapping(StringRange range, int maxIndex)
+        {
+            if (maxIndex > range.Length - 1)
+                maxIndex = range.Length - 1;
+
+            if (IsSpace(range[maxIndex]))
+                return maxIndex + 1;
+
+            LineBreakEnumerator lineBreakEnumerator = new LineBreakEnumerator(
+                new ReadOnlySlice<char>(range.String.AsMemory().Slice(range.OffsetToFirstChar, range.Length)));
+
+            LineBreak ? lineBreak = null;
+
+            while (lineBreakEnumerator.MoveNext())
+            {
+                if (lineBreakEnumerator.Current.PositionWrap > maxIndex)
+                    break;
+
+                lineBreak = lineBreakEnumerator.Current;
+            }
+
+            return lineBreak.HasValue ? lineBreak.Value.PositionWrap : maxIndex;
         }
 
         private TextLineRun(int length, TextRun textRun)
         {
             Length = length;
             TextRun = textRun;
-        }
-
-        private void SetGlyphWidths()
-        {
-            var result = new double[StringRange.Length];
-
-            for (var i = 0; i < StringRange.Length; i++)
-            {
-                // TODO: is there a better way of getting glyph metrics?
-                var tf = Typeface;
-                var size = new FormattedText
-                {
-                    Text = StringRange[i].ToString(),
-                    Typeface = new Typeface(tf.FontFamily, tf.Style, tf.Weight),
-                    FontSize = FontSize
-                }.Bounds.Size;
-                
-                result[i] = size.Width;
-            }
-
-            _glyphWidths = result;
         }
 
         public void Draw(DrawingContext drawingContext, double x, double y)
@@ -260,8 +326,36 @@ namespace AvaloniaEdit.Text
                     drawingContext.FillRectangle(TextRun.Properties.BackgroundBrush, bounds);
                 }
 
-                drawingContext.DrawText(TextRun.Properties.ForegroundBrush, 
+                drawingContext.DrawText(TextRun.Properties.ForegroundBrush,
                     new Point(x, y), _formattedText);
+
+                var glyphTypeface = TextRun.Properties.Typeface.GlyphTypeface;
+                
+                var scale =  TextRun.Properties.FontSize / glyphTypeface.DesignEmHeight;
+
+                var baseline = y + -glyphTypeface.Ascent * scale;
+                
+                if (TextRun.Properties.Underline)
+                {
+                    var pen = new Pen(TextRun.Properties.ForegroundBrush, glyphTypeface.UnderlineThickness * scale);
+
+                    var posY = baseline + glyphTypeface.UnderlinePosition * scale;
+
+                    drawingContext.DrawLine(pen,
+                        new Point(x, posY),
+                        new Point(x + _formattedTextSize.Width, posY));
+                }
+
+                if (TextRun.Properties.Strikethrough)
+                {
+                    var pen = new Pen(TextRun.Properties.ForegroundBrush, glyphTypeface.StrikethroughThickness * scale);
+
+                    var posY = baseline + glyphTypeface.StrikethroughPosition * scale;
+
+                    drawingContext.DrawLine(pen,
+                        new Point(x, posY),
+                        new Point(x + _formattedTextSize.Width, posY));
+                }
             }
         }
 
@@ -270,7 +364,7 @@ namespace AvaloniaEdit.Text
             if (IsEnd) return true;
 
             if (IsTab) return false;
-            
+
             var index = Length;
             if (index > 0 && IsSpace(StringRange[index - 1]))
             {
@@ -337,21 +431,76 @@ namespace AvaloniaEdit.Text
             return ch == ' ' || ch == '\u00a0';
         }
 
-        public void TrimEnd(int trimLength)
-		{
-            Length = Math.Max(Length - trimLength, 1);
-            StringRange = new StringRange(StringRange.ToString(), 0, Length);
-            _formattedText = new FormattedText()
+        class GlyphWidths : IReadOnlyList<double>
+        {
+            private const double NOT_CALCULATED_YET = -1;
+            private double[] _glyphWidths;
+            private GlyphTypeface _typeFace;
+            private StringRange _range;
+            private double _scale;
+            private double _tabSize;
+
+            public int Count => _glyphWidths.Length;
+            public double this[int index] => GetAt(index);
+
+            internal GlyphWidths(StringRange range, GlyphTypeface typeFace, double fontSize, double tabSize)
             {
-                Text = StringRange.ToString(),
-                Typeface = _formattedText.Typeface,
-                FontSize = _formattedText.FontSize
-            };
+                _range = range;
+                _typeFace = typeFace;
+                _scale = fontSize / _typeFace.DesignEmHeight;
+                _tabSize = tabSize;
 
-            var size = _formattedText.Bounds.Size;
-            _formattedTextSize = size;
+                InitGlyphWidths();
+            }
 
-            Width = size.Width;
+            double GetAt(int index)
+            {
+                if (_glyphWidths.Length == 0)
+                    return 0;
+
+                if (_range[index] == '\t')
+                    return _tabSize;
+
+                if (_glyphWidths[index] == NOT_CALCULATED_YET)
+                    _glyphWidths[index] = MeasureGlyphAt(index);
+
+                return _glyphWidths[index];
+            }
+
+            double MeasureGlyphAt(int index)
+            {
+                return _typeFace.GetGlyphAdvance(
+                    _typeFace.GetGlyph(_range[index])) * _scale;
+            }
+
+            void InitGlyphWidths()
+            {
+                int capacity = _range.Length;
+
+                bool useCheapGlyphMeasurement = 
+                    capacity >= VisualLine.LENGTH_LIMIT && 
+                    _typeFace.IsFixedPitch;
+
+                if (useCheapGlyphMeasurement)
+                {
+                    double size = MeasureGlyphAt(0);
+                    _glyphWidths = Enumerable.Repeat<double>(size, capacity).ToArray();
+                    return;
+                }
+
+                _glyphWidths = Enumerable.Repeat<double>(NOT_CALCULATED_YET, capacity).ToArray();
+            }
+
+            IEnumerator<double> IEnumerable<double>.GetEnumerator()
+            {
+                foreach (double value in _glyphWidths)
+                    yield return value;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return _glyphWidths.GetEnumerator();
+            }
         }
     }
 }

@@ -243,7 +243,7 @@ namespace AvaloniaEdit.Highlighting
                 return true;
             return color.Background == null && color.Foreground == null
                 && color.FontStyle == null && color.FontWeight == null
-                && color.Underline == null;
+                && color.Underline == null && color.Strikethrough == null;
         }
 
         /// <summary>
@@ -254,7 +254,7 @@ namespace AvaloniaEdit.Highlighting
             ApplyColorToElement(element, color, CurrentContext);
         }
 
-        public static void ApplyColorToElement(VisualLineElement element, HighlightingColor color, ITextRunConstructionContext context)
+        internal static void ApplyColorToElement(VisualLineElement element, HighlightingColor color, ITextRunConstructionContext context)
         {
             if (color.Foreground != null)
             {
@@ -272,15 +272,17 @@ namespace AvaloniaEdit.Highlighting
             {
                 var tf = element.TextRunProperties.Typeface;
                 element.TextRunProperties.Typeface = new Avalonia.Media.Typeface(
-                    color.FontFamily ?? tf.FontFamily,                    
+                    color.FontFamily ?? tf.FontFamily,
                     color.FontStyle ?? tf.Style,
                     color.FontWeight ?? tf.Weight
                 );
             }
             if (color.FontSize.HasValue)
                 element.TextRunProperties.FontSize = color.FontSize.Value;
-            //if(color.Underline ?? false)
-            //	element.TextRunProperties.SetTextDecorations(TextDecorations.Underline);
+            if (color.Underline ?? false)
+                element.TextRunProperties.Underline = true;
+            if (color.Strikethrough ?? false)
+                element.TextRunProperties.Strikethrough = true;
         }
 
         /// <summary>

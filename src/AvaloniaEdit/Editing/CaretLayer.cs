@@ -97,7 +97,7 @@ namespace AvaloniaEdit.Editing
 
                 if (_textArea.OverstrikeMode)
                 {
-                    if (caretBrush is SolidColorBrush scBrush)
+                    if (caretBrush is ISolidColorBrush scBrush)
                     {
                         var brushColor = scBrush.Color;
                         var newColor = Color.FromArgb(100, brushColor.R, brushColor.G, brushColor.B);
@@ -105,8 +105,8 @@ namespace AvaloniaEdit.Editing
                     }
                 }
 
-                var r = new Rect(_caretRectangle.X - TextView.HorizontalOffset,
-                                  _caretRectangle.Y - TextView.VerticalOffset,
+                var r = new Rect(_caretRectangle.X + TextView.DocumentBounds.Left,
+                                  _caretRectangle.Y + TextView.DocumentBounds.Top,
                                   _caretRectangle.Width,
                                   _caretRectangle.Height);
 

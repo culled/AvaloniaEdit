@@ -17,7 +17,6 @@
 // DEALINGS IN THE SOFTWARE.
 
 using Avalonia;
-using Avalonia.Media;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -52,6 +51,8 @@ namespace AvaloniaEdit.Document
 
         internal DocumentLine(TextDocument document)
         {
+            LineFormat = document.CurrentNewLineFormat;
+
 #if DEBUG
             Debug.Assert(document != null);
             _document = document;
@@ -263,14 +264,6 @@ namespace AvaloniaEdit.Document
 
         #endregion
 
-        #region Formatting Properties
-        public string? Tag { get; set; } = null;
-        public Thickness? Margin { get; set; } = null;
-        public double? LineSpacing { get; set; } = null;
-        public double? FontSize { get; set; } = null;
-        public string? Typeface { get; set; } = null;
-        #endregion
-
         #region ToString
         /// <summary>
         /// Gets a string with debug output showing the line number and offset.
@@ -285,5 +278,15 @@ namespace AvaloniaEdit.Document
                 "[DocumentLine Number={0} Offset={1} Length={2}]", LineNumber, Offset, Length);
         }
         #endregion
-    }
+
+        #region Formatting Properties
+        private DocumentLineFormat _lineFormat;
+
+        public DocumentLineFormat LineFormat
+		{
+            get => _lineFormat;
+            internal set => _lineFormat = value;
+		}
+		#endregion
+	}
 }

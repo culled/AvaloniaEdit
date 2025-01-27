@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using Avalonia.Utilities;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Utils;
 
@@ -127,7 +128,7 @@ namespace AvaloniaEdit.Rendering
             var lineNumber = 0;
             foreach (var ls in _document.Lines)
             {
-                nodes[lineNumber++] = new HeightTreeNode(ls, _defaultLineHeight);
+                nodes[lineNumber++] = new HeightTreeNode(ls, _defaultLineHeight + ls.LineFormat.Margins.Top + ls.LineFormat.Margins.Bottom);
             }
             Debug.Assert(nodes.Length > 0);
             // now build the corresponding balanced tree
@@ -212,7 +213,7 @@ namespace AvaloniaEdit.Rendering
 
         private HeightTreeNode InsertAfter(HeightTreeNode node, DocumentLine newLine)
         {
-            var newNode = new HeightTreeNode(newLine, _defaultLineHeight);
+            var newNode = new HeightTreeNode(newLine, _defaultLineHeight + newLine.LineFormat.Margins.Top + newLine.LineFormat.Margins.Bottom);
             if (node.Right == null)
             {
                 if (node.LineNode.CollapsedSections != null)
@@ -488,7 +489,6 @@ namespace AvaloniaEdit.Rendering
 
         private HeightTreeNode GetNodeByVisualPosition(double position)
         {
-            position = Math.Max(0, position -_document.TopPadding);
             var node = _root;
             while (true)
             {
@@ -496,27 +496,27 @@ namespace AvaloniaEdit.Rendering
                 if (node.Left != null)
                 {
                     positionAfterLeft -= node.Left.TotalHeight;
-                    if (positionAfterLeft < 0)
+                    if (MathUtilities.LessThan(positionAfterLeft, 0))
                     {
                         // Descend into left
                         node = node.Left;
                         continue;
                     }
                 }
-                var positionBeforeRight = positionAfterLeft - node.LineNode.TotalHeight;
-                if (positionBeforeRight < 0)
+                var positionBeforeRight =  positionAfterLeft - node.LineNode.TotalHeight;
+                if (MathUtilities.LessThan(positionBeforeRight, 0))
                 {
                     // Found the correct node
                     return node;
                 }
-                if (node.Right == null || node.Right.TotalHeight == 0)
+                if (node.Right == null || MathUtilities.IsZero(node.Right.TotalHeight))
                 {
                     // Can happen when position>node.totalHeight,
                     // i.e. at the end of the document, or due to rounding errors in previous loop iterations.
 
                     // If node.lineNode isn't collapsed, return that.
                     // Also return node.lineNode if there is no previous node that we could return instead.
-                    if (node.LineNode.TotalHeight > 0 || node.Left == null)
+                    if (MathUtilities.GreaterThan(node.LineNode.TotalHeight, 0) || node.Left == null)
                         return node;
                     // Otherwise, descend into left (find the last non-collapsed node)
                     node = node.Left;
@@ -530,9 +530,9 @@ namespace AvaloniaEdit.Rendering
             }
         }
 
-        private double GetVisualPositionFromNode(HeightTreeNode node)
+        private static double GetVisualPositionFromNode(HeightTreeNode node)
         {
-            var position = (node.Left?.TotalHeight ?? 0) + _document.TopPadding;
+            var position = node.Left?.TotalHeight ?? 0;
             while (node.Parent != null)
             {
                 if (node.IsDirectlyCollapsed)
@@ -608,7 +608,7 @@ namespace AvaloniaEdit.Rendering
         #region LineCount & TotalHeight
         public int LineCount => _root.TotalCount;
 
-        public double TotalHeight => _root.TotalHeight + _document.TopPadding + _document.BottomPadding;
+        public double TotalHeight => _root.TotalHeight;
 
         #endregion
 

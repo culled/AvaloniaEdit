@@ -6,12 +6,10 @@
     <Style Selector="search|SearchPanel ToggleButton.ExpanderToggle">
         <Setter Property="Template">
             <ControlTemplate>
-							<Border Background="Transparent">
-                <Path Fill="{DynamicResource ButtonForeground}"
+                <Path Fill="{DynamicResource ThemeForegroundBrush}"
               VerticalAlignment="Center"
               HorizontalAlignment="Center"
               Data="M 0 2 L 4 6 L 0 10 Z" />
-							</Border>
             </ControlTemplate>
         </Setter>
     </Style>
@@ -28,7 +26,7 @@
   </Style>
 
   <Style Selector="search|SearchPanel Button:pointerover">
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}"/>
   </Style>
 
     <Style Selector="search|SearchPanel">
@@ -36,20 +34,17 @@
         <Setter Property="BorderThickness"
             Value="1" />
         <Setter Property="BorderBrush"
-            Value="{DynamicResource SystemControlBackgroundChromeBlackMediumLowBrush}" />
+            Value="{DynamicResource ThemeBorderLowBrush}" />
         <Setter Property="Background"
-            Value="{DynamicResource SystemControlBackgroundChromeBlackLowBrush}" />
+            Value="{DynamicResource ThemeControlLowBrush}" />
         <Setter Property="Focusable" Value="True" />
         <Setter Property="Template">
             <ControlTemplate>
-                <Border BorderThickness="{TemplateBinding BorderThickness}"
+                <Border Name="PART_Border" BorderThickness="{TemplateBinding BorderThickness}"
                 BorderBrush="{TemplateBinding BorderBrush}"
                 Background="{TemplateBinding Background}"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-												TextBlock.FontFamily="Segoi UI"
-												TextBlock.FontSize="10"
-												Padding="0,0,16,0">
+                VerticalAlignment="Top" TextBlock.FontFamily="Segoi UI" TextBlock.FontSize="10">
                     <Grid ColumnDefinitions="Auto,Auto,Auto"
                 RowDefinitions="Auto,Auto">
                         <Popup Name="PART_MessageView"
@@ -59,17 +54,13 @@
                                Focusable="False"
                                IsOpen="False"
                                ObeyScreenEdges="True">
-                            <ContentPresenter Name="PART_MessageContent"/>
+                            <ContentPresenter Name="PART_MessageContent" />
                         </Popup>
-                        <ToggleButton Classes="ExpanderToggle"
-																			Name="Expander"
-																			VerticalAlignment="Top"
-																			IsVisible="{Binding !_textEditor.IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}"
+                        <ToggleButton Classes="ExpanderToggle" Name="Expander" VerticalAlignment="Top" IsVisible="{Binding !_textEditor.IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}"
                                       IsChecked="{Binding IsReplaceMode, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                       Grid.Column="0"
                                       Grid.Row="0"
-                                      Width="24"
-										                  Height="24"
+                                      Width="16"
                                       Margin="2">
                             <ToolTip.Tip>
                                 <TextBlock Text="{x:Static ae:SR.SearchToggleReplace}" />
@@ -111,19 +102,17 @@
                          Stretch="Fill"
                          Source="resm:AvaloniaEdit.Search.Assets.FindNext.png?assembly=AvaloniaEdit" />
                                 </Button>
-                                <Button Height="24"
-																				Background="Transparent"
-																				BorderThickness="0"
-                                        Width="24"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Top"
-                                        Command="{x:Static search:SearchCommands.CloseSearchPanel}"
-                                        VerticalContentAlignment="Center"
-                                        HorizontalContentAlignment="Center"
-                                        Focusable="True">
+                                <Button Height="16" Background="Transparent" BorderThickness="0"
+                        Width="16"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Command="{x:Static search:SearchCommands.CloseSearchPanel}"
+                        VerticalContentAlignment="Center"
+                        HorizontalContentAlignment="Center"
+                        Focusable="True">
                                     <Path Data="M 0,0 L 8,8 M 8,0 L 0,8"
-                                          Stroke="{DynamicResource ButtonForeground}"
-                                          StrokeThickness="1" />
+                        Stroke="{DynamicResource ThemeForegroundBrush}"
+                        StrokeThickness="1" />
                                 </Button>
                             </StackPanel>
 

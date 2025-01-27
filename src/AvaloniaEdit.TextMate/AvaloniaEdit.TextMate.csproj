@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AvaloniaEdit\AvaloniaEdit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TextMateSharp" Version="$(TextMateSharpVersion)" />
+    <PackageReference Include="TextMateSharp.Grammars" Version="$(TextMateSharpVersion)" />
+  </ItemGroup>
+
+</Project>

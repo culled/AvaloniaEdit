@@ -103,5 +103,16 @@ namespace AvaloniaEdit.Document
 
             protected override void StopListening(TextDocument source) => source.TextChanged -= DeliverEvent;
         }
+
+        /// <summary>
+        /// Weak event manager for the <see cref="TextDocument.Changed"/> event.
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
+        public sealed class FormatChanged : WeakEventManagerBase<FormatChanged, TextDocument, EventHandler<DocumentFormatChangeEventArgs>, DocumentFormatChangeEventArgs>
+        {
+            protected override void StartListening(TextDocument source) => source.FormatChanged += DeliverEvent;
+
+            protected override void StopListening(TextDocument source) => source.FormatChanged -= DeliverEvent;
+        }
     }
 }

@@ -37,6 +37,8 @@ namespace AvaloniaEdit.Rendering
     /// </summary>
     public sealed class VisualLine
     {
+        public const int LENGTH_LIMIT = 3000;
+
         private enum LifetimePhase : byte
         {
             Generating,
@@ -119,13 +121,16 @@ namespace AvaloniaEdit.Rendering
         /// </summary>
         public double VisualTop { get; internal set; }
 
-        internal VisualLine(TextView textView, DocumentLine firstDocumentLine)
+        public Thickness Margins { get; private set; }
+
+        internal VisualLine(TextView textView, DocumentLine firstDocumentLine, TextParagraphProperties paragraphProperties)
         {
             Debug.Assert(textView != null);
             Debug.Assert(firstDocumentLine != null);
             _textView = textView;
             Document = textView.Document;
             FirstDocumentLine = firstDocumentLine;
+            Margins = paragraphProperties.Margins;
         }
 
         internal void ConstructVisualElements(ITextRunConstructionContext context, VisualLineElementGenerator[] generators)
@@ -155,6 +160,7 @@ namespace AvaloniaEdit.Rendering
         private void PerformVisualElementConstruction(VisualLineElementGenerator[] generators)
         {
             var document = Document;
+            var lineLength = FirstDocumentLine.Length;
             var offset = FirstDocumentLine.Offset;
             var currentLineEnd = offset + FirstDocumentLine.Length;
             LastDocumentLine = FirstDocumentLine;
@@ -164,7 +170,7 @@ namespace AvaloniaEdit.Rendering
                 var textPieceEndOffset = currentLineEnd;
                 foreach (var g in generators)
                 {
-                    g.CachedInterest = g.GetFirstInterestedOffset(offset + askInterestOffset);
+                    g.CachedInterest = (lineLength > LENGTH_LIMIT) ? -1: g.GetFirstInterestedOffset(offset + askInterestOffset);
                     if (g.CachedInterest != -1)
                     {
                         if (g.CachedInterest < offset)
@@ -179,7 +185,21 @@ namespace AvaloniaEdit.Rendering
                 if (textPieceEndOffset > offset)
                 {
                     var textPieceLength = textPieceEndOffset - offset;
-                    _elements.Add(new VisualLineText(this, textPieceLength));
+                    int remaining = textPieceLength;
+                    while (true)
+                    {
+                        if (remaining > LENGTH_LIMIT)
+                        {
+                            // split in chunks of LENGTH_LIMIT
+                            _elements.Add(new VisualLineText(this, LENGTH_LIMIT));
+                            remaining -= LENGTH_LIMIT;
+                        }
+                        else
+                        {
+                            _elements.Add(new VisualLineText(this, remaining));
+                            break;
+                        }
+                    }
                     offset = textPieceEndOffset;
                 }
                 // If no elements constructed / only zero-length elements constructed:
@@ -285,8 +305,7 @@ namespace AvaloniaEdit.Rendering
         internal void SetTextLines(List<TextLine> textLines)
         {
             _textLines = new ReadOnlyCollection<TextLine>(textLines);
-            
-            Height = 0;
+            Height = Margins.Top + Margins.Bottom;
             foreach (var line in textLines)
             {
                 Height += line.Height;
@@ -364,7 +383,7 @@ namespace AvaloniaEdit.Rendering
         {
             if (textLine == null)
                 throw new ArgumentNullException(nameof(textLine));
-            var pos = VisualTop;
+            var pos = VisualTop + Margins.Top;
             foreach (var tl in TextLines)
             {
                 if (tl == textLine)
@@ -411,7 +430,7 @@ namespace AvaloniaEdit.Rendering
         public TextLine GetTextLineByVisualYPosition(double visualTop)
         {
             const double epsilon = 0.0001;
-            var pos = VisualTop;
+            var pos = VisualTop + Margins.Top;
             foreach (var tl in TextLines)
             {
                 pos += tl.Height;
@@ -762,15 +781,20 @@ namespace AvaloniaEdit.Rendering
         public VisualLineDrawingVisual(VisualLine visualLine)
         {
             VisualLine = visualLine;
-            LineHeight = VisualLine.TextLines.Sum(textLine => textLine.Height);
+            LineHeight = VisualLine.Margins.Top + VisualLine.Margins.Bottom;
+
+            foreach (var textLine in VisualLine.TextLines)
+            {
+                LineHeight += textLine.Height;
+            }
         }
 
         public override void Render(DrawingContext context)
         {
-            double pos = 0;
+            double pos = VisualLine.Margins.Top;
             foreach (var textLine in VisualLine.TextLines)
             {
-                textLine.Draw(context, new Point(0, pos));
+                textLine.Draw(context, new Point(VisualLine.Margins.Left, pos));
                 pos += textLine.Height;
             }
         }

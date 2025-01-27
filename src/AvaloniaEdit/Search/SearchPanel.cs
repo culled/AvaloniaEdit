@@ -44,6 +44,7 @@ namespace AvaloniaEdit.Search
         private SearchResultBackgroundRenderer _renderer;
         private TextBox _searchTextBox;
         private TextEditor _textEditor { get; set; }
+        private Border _border;
 
         #region DependencyProperties
         /// <summary>
@@ -221,9 +222,7 @@ namespace AvaloniaEdit.Search
             var panel = new SearchPanel();
             panel.AttachInternal(textArea);
             panel._handler = new SearchInputHandler(textArea, panel);
-            //textArea.DefaultInputHandler.NestedInputHandlers.Add(panel._handler);
-            if(textArea.ActiveInputHandler is TextAreaInputHandler handler)
-                handler.NestedInputHandlers.Add(panel._handler);
+            textArea.DefaultInputHandler.NestedInputHandlers.Add(panel._handler);
             ((ISetLogicalParent)panel).SetParent(textArea);
 
             return panel;
@@ -296,6 +295,7 @@ namespace AvaloniaEdit.Search
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
         {
             base.OnApplyTemplate(e);
+            _border = e.NameScope.Find<Border>("PART_Border");
             _searchTextBox = e.NameScope.Find<TextBox>("PART_searchTextBox");
             _messageView = e.NameScope.Find<Popup>("PART_MessageView");
             _messageViewContent = e.NameScope.Find<ContentPresenter>("PART_MessageContent");
@@ -334,7 +334,7 @@ namespace AvaloniaEdit.Search
         /// </summary>
         public void FindNext()
         {
-            var result = _renderer.CurrentResults.FindFirstSegmentWithStartAfter(GetStartOffset(true) + 1) ??
+            var result = _renderer.CurrentResults.FindFirstSegmentWithStartAfter(_textArea.Caret.Offset + 1) ??
                          _renderer.CurrentResults.FirstSegment;
             if (result != null)
             {
@@ -347,7 +347,7 @@ namespace AvaloniaEdit.Search
         /// </summary>
         public void FindPrevious()
         {
-            var result = _renderer.CurrentResults.FindFirstSegmentWithStartAfter(GetStartOffset(false));
+            var result = _renderer.CurrentResults.FindFirstSegmentWithStartAfter(_textArea.Caret.Offset);
             if (result != null)
                 result = _renderer.CurrentResults.GetPreviousSegment(result);
             if (result == null)
@@ -362,20 +362,11 @@ namespace AvaloniaEdit.Search
         {
             if (!IsReplaceMode) return;
 
-            var result = _renderer.CurrentResults.FindFirstSegmentWithStartAfter(GetStartOffset(false)) ??
-                         _renderer.CurrentResults.FirstSegment;
-
-            if (result != null)
-            {
-                SelectResult(result);
-            }
-
+            FindNext();
             if (!_textArea.Selection.IsEmpty)
             {
                 _textArea.Selection.ReplaceSelectionWithText(ReplacePattern ?? string.Empty);
             }
-
-            FindNext();
 
             UpdateSearch();
         }
@@ -409,8 +400,7 @@ namespace AvaloniaEdit.Search
 
             if (!string.IsNullOrEmpty(SearchPattern))
             {
-                int offset = GetStartOffset(false);
-
+                var offset = _textArea.Caret.Offset;
                 if (changeSelection)
                 {
                     _textArea.ClearSelection();
@@ -443,30 +433,16 @@ namespace AvaloniaEdit.Search
             _textArea.TextView.InvalidateLayer(KnownLayer.Selection);
         }
 
-        private int GetStartOffset(bool endOfSelection)
-		{
-            if (_textArea.Selection.IsEmpty)
-            {
-                return _textArea.Caret.Offset;
-            }
-            else
-            {
-                if(endOfSelection)
-				{
-                    return Math.Max(_textArea.Document.GetOffset(_textArea.Selection.StartPosition.Location), _textArea.Document.GetOffset(_textArea.Selection.EndPosition.Location));
-                }
-                else
-				{
-                    return Math.Min(_textArea.Document.GetOffset(_textArea.Selection.StartPosition.Location), _textArea.Document.GetOffset(_textArea.Selection.EndPosition.Location));
-                } 
-            }
-        }
-
         private void SelectResult(TextSegment result)
         {
             _textArea.Caret.Offset = result.StartOffset;
             _textArea.Selection = Selection.Create(_textArea, result.StartOffset, result.EndOffset);
-            _textArea.Caret.BringCaretToView();
+
+            double distanceToViewBorder = _border == null ?
+                Caret.MinimumDistanceToViewBorder :
+                _border.Bounds.Height + _textArea.TextView.DefaultLineHeight;
+            _textArea.Caret.BringCaretToView(distanceToViewBorder);
+
             // show caret even if the editor does not have the Keyboard Focus
             _textArea.Caret.Show();
         }
