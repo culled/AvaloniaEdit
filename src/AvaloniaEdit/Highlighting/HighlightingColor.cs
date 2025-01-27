@@ -207,6 +207,11 @@ namespace AvaloniaEdit.Highlighting
             {
                 b.AppendFormat(CultureInfo.InvariantCulture, "color: #{0:x2}{1:x2}{2:x2}; ", c.Value.R, c.Value.G, c.Value.B);
             }
+            c = Background?.GetColor(null);
+            if (c != null && c != Colors.Transparent)
+            {
+                b.AppendFormat(CultureInfo.InvariantCulture, "background-color: #{0:x2}{1:x2}{2:x2}; ", c.Value.R, c.Value.G, c.Value.B);
+            }
             if (FontFamily != null)
             {
                 b.Append("font-family: ");

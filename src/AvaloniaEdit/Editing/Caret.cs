@@ -33,6 +33,7 @@ namespace AvaloniaEdit.Editing
     public sealed class Caret
     {
         private const double CaretWidth = 0.5;
+        private const double CaretBelowBaseline = 3;
 
         private readonly TextArea _textArea;
         private readonly TextView _textView;
@@ -394,7 +395,7 @@ namespace AvaloniaEdit.Editing
             var textLine = visualLine.GetTextLine(_position.VisualColumn, _position.IsAtEndOfLine);
             var xPos = visualLine.GetTextLineVisualXPosition(textLine, _position.VisualColumn);
             var lineTop = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextTop);
-            var lineBottom = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextBottom);
+            var lineBottom = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextBottom) + CaretBelowBaseline;
 
             return new Rect(xPos,
                             lineTop,
@@ -427,7 +428,7 @@ namespace AvaloniaEdit.Editing
 				double xPos = visualLine.GetTextLineVisualXPosition(textLine, currentPos);
 				double xPos2 = visualLine.GetTextLineVisualXPosition(textLine, nextPos);
 				double lineTop = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextTop);
-				double lineBottom = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextBottom);
+				double lineBottom = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextBottom) + CaretBelowBaseline;
 				r = new Rect(xPos, lineTop, xPos2 - xPos, lineBottom - lineTop);
 			}
 			// If the caret is too small (e.g. in front of zero-width character), ensure it's still visible

@@ -191,9 +191,10 @@ namespace AvaloniaEdit.Rendering
 		private static IEnumerable<Rect> ProcessTextLines(TextView textView, VisualLine visualLine, int segmentStartVc, int segmentEndVc)
 		{
 			TextLine lastTextLine = visualLine.TextLines.Last();
-			Vector scrollOffset = textView.ScrollOffset;
+            //Vector scrollOffset = textView.ScrollOffset;
+            var offset = textView.DocumentBounds.TopLeft;
 
-			for (int i = 0; i < visualLine.TextLines.Count; i++) {
+            for (int i = 0; i < visualLine.TextLines.Count; i++) {
 				TextLine line = visualLine.TextLines[i];
 				double y = visualLine.GetTextLineVisualYPosition(line, VisualYPosition.TextTop);
 				int visualStartCol = visualLine.GetTextLineVisualStartColumn(line);
@@ -205,17 +206,17 @@ namespace AvaloniaEdit.Rendering
 
 				if (segmentEndVc < visualStartCol)
 					break;
-				if (lastTextLine != line && segmentStartVc > visualEndCol)
+				if (lastTextLine != line && segmentStartVc >= visualEndCol)
 					continue;
 				int segmentStartVcInLine = Math.Max(segmentStartVc, visualStartCol);
 				int segmentEndVcInLine = Math.Min(segmentEndVc, visualEndCol);
-				y -= scrollOffset.Y;
+				y += offset.Y;
 				Rect lastRect = default;
 				if (segmentStartVcInLine == segmentEndVcInLine) {
 					// GetTextBounds crashes for length=0, so we'll handle this case with GetDistanceFromCharacterHit
 					// We need to return a rectangle to ensure empty lines are still visible
 					double pos = visualLine.GetTextLineVisualXPosition(line, segmentStartVcInLine);
-					pos -= scrollOffset.X;
+					pos += offset.X;
 					// The following special cases are necessary to get rid of empty rectangles at the end of a TextLine if "Show Spaces" is active.
 					// If not excluded once, the same rectangle is calculated (and added) twice (since the offset could be mapped to two visual positions; end/start of line), if there is no trailing whitespace.
 					// Skip this TextLine segment, if it is at the end of this line and this line is not the last line of the VisualLine and the selection continues and there is no trailing whitespace.
@@ -227,9 +228,9 @@ namespace AvaloniaEdit.Rendering
 				} else {
 					if (segmentStartVcInLine <= visualEndCol) {
 						foreach (var b in line.GetTextBounds(segmentStartVcInLine, segmentEndVcInLine - segmentStartVcInLine)) {
-							double left = b.Rectangle.Left - scrollOffset.X;
-							double right = b.Rectangle.Right - scrollOffset.X;
-							if (lastRect != default)
+                            var left = b.Rectangle.Left + offset.X + visualLine.Margins.Left;
+                            var right = b.Rectangle.Right + offset.X + visualLine.Margins.Left;
+                            if (lastRect != default)
 								yield return lastRect;
 							// left>right is possible in RTL languages
 							lastRect = new Rect(Math.Min(left, right), y, Math.Abs(right - left), line.Height);
@@ -252,15 +253,17 @@ namespace AvaloniaEdit.Rendering
 						// For the last line, visualEndCol already includes the whitespace.
 						left = (line == lastTextLine ? line.WidthIncludingTrailingWhitespace : line.Width);
 					}
-					if (line != lastTextLine || segmentEndVc == int.MaxValue) {
-						// If word-wrap is enabled and the segment continues into the next line,
-						// or if the extendToFullWidthAtLineEnd option is used (segmentEndVC == int.MaxValue),
-						// we select the full width of the viewport.
-						right = Math.Max(((ILogicalScrollable)textView).Extent.Width, ((ILogicalScrollable)textView).Viewport.Width);
-					} else {
-						right = visualLine.GetTextLineVisualXPosition(lastTextLine, segmentEndVc);
-					}
-					Rect extendSelection = new Rect(Math.Min(left, right), y, Math.Abs(right - left), line.Height);
+                    left += offset.X;
+                    if (line != lastTextLine || segmentEndVc == int.MaxValue) {
+                    	// If word-wrap is enabled and the segment continues into the next line,
+                    	// or if the extendToFullWidthAtLineEnd option is used (segmentEndVC == int.MaxValue),
+                    	// we select the full width of the viewport.
+                    	right = Math.Max(((ILogicalScrollable)textView).Extent.Width, ((ILogicalScrollable)textView).Viewport.Width);
+                    } else {
+                    	right = visualLine.GetTextLineVisualXPosition(lastTextLine, segmentEndVc);
+                    }
+					right += offset.X;
+                    Rect extendSelection = new Rect(Math.Min(left, right), y, Math.Abs(right - left), line.Height);
 					if (lastRect != default) {
 						if (extendSelection.Intersects(lastRect)) {
 							lastRect.Union(extendSelection);

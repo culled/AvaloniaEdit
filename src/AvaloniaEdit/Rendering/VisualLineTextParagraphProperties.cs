@@ -17,8 +17,10 @@
 // DEALINGS IN THE SOFTWARE.
 
 
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.TextFormatting;
+using AvaloniaEdit.Document;
 
 namespace AvaloniaEdit.Rendering
 {
@@ -29,8 +31,11 @@ namespace AvaloniaEdit.Rendering
 		internal double tabSize;
 		internal double indent;
 		internal bool firstLineInParagraph;
+		internal Thickness margins;
+		internal double lineSpacingPercentage;
+		internal Document.DocumentLineFormat.TextCasingMode textCasing;
 
-		public override double DefaultIncrementalTab => tabSize;
+        public override double DefaultIncrementalTab => tabSize;
 
 		public override FlowDirection FlowDirection => FlowDirection.LeftToRight;
 		public override TextAlignment TextAlignment => TextAlignment.Left;
@@ -42,5 +47,26 @@ namespace AvaloniaEdit.Rendering
 
 		//public override TextMarkerProperties TextMarkerProperties { get { return null; } }
 		public override double Indent => indent;
-	}
+
+		public Thickness Margins => margins;
+
+		public double LineSpacingPercentage => lineSpacingPercentage;
+
+		public Document.DocumentLineFormat.TextCasingMode TextCasing => textCasing;
+
+		public VisualLineTextParagraphProperties ApplyOverrides(DocumentLineFormat lineFormat)
+		{
+            return new VisualLineTextParagraphProperties()
+			{
+				defaultTextRunProperties = defaultTextRunProperties,
+				textWrapping = textWrapping,
+				tabSize = tabSize,
+				indent = indent,
+				firstLineInParagraph = firstLineInParagraph,
+				margins = lineFormat.Margins,
+				lineSpacingPercentage =	lineFormat.HasLineSpacingOverride ? lineFormat.LineSpacingPercentage : lineSpacingPercentage,
+                textCasing = lineFormat.TextCasing
+            };
+        }
+    }
 }

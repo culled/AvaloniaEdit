@@ -54,6 +54,8 @@ namespace AvaloniaEdit.Document
             Debug.Assert(document != null);
             _document = document;
 #endif
+
+            LineFormat = document.CurrentNewLineFormat;
         }
 
         [Conditional("DEBUG")]
@@ -273,6 +275,16 @@ namespace AvaloniaEdit.Document
             return string.Format(
                 CultureInfo.InvariantCulture,
                 "[DocumentLine Number={0} Offset={1} Length={2}]", LineNumber, Offset, Length);
+        }
+        #endregion
+
+        #region Formatting
+        private DocumentLineFormat _lineFormat;
+
+        public DocumentLineFormat LineFormat
+        {
+            get => _lineFormat;
+            internal set => _lineFormat = value;
         }
         #endregion
     }

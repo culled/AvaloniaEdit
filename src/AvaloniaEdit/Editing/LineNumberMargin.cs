@@ -108,7 +108,7 @@ namespace AvaloniaEdit.Editing
 						lineNumber.ToString(CultureInfo.CurrentCulture),
 						Typeface, EmSize, foreground
 					);
-					var y = line.GetTextLineVisualYPosition(line.TextLines[0], VisualYPosition.TextTop);
+					var y = line.GetTextLineVisualYPosition(line.TextLines[0], VisualYPosition.TextTop) + textView.DocumentMargin.Top;
 					drawingContext.DrawText(text, new Point(renderSize.Width - text.Width, y - textView.VerticalOffset));
 				}
 			}

@@ -213,15 +213,19 @@ namespace AvaloniaEdit
 
             if (change.Property == WordWrapProperty)
             {
+                //if (WordWrap)
+                //{
+                //    _horizontalScrollBarVisibilityBck = HorizontalScrollBarVisibility;
+                //    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+                //}
+                //else
+                //{
+                //    HorizontalScrollBarVisibility = _horizontalScrollBarVisibilityBck;
+                //}
                 if (WordWrap)
-                {
-                    _horizontalScrollBarVisibilityBck = HorizontalScrollBarVisibility;
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
-                }
+                    TextArea.TextView.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
                 else
-                {
-                    HorizontalScrollBarVisibility = _horizontalScrollBarVisibilityBck;
-                }
+                    TextArea.TextView.SetValue(TextBlock.TextWrappingProperty, TextWrapping.NoWrap);
             }
         }
 
@@ -302,10 +306,20 @@ namespace AvaloniaEdit
         protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
         {
             base.OnApplyTemplate(e);
+
+            //If the parent view is reloaded, a new content parent will be created, so we must first disconnect from the previous parent
+            if (TextArea.Parent is ScrollViewer parent)
+            {
+                parent.Content = null;
+            }
+            else
+            {
+                //Only install on initial creation
+                searchPanel = SearchPanel.Install(this);
+            }
+
             ScrollViewer = (ScrollViewer)e.NameScope.Find("PART_ScrollViewer");
             ScrollViewer.Content = TextArea;
-
-            searchPanel = SearchPanel.Install(this);
         }
 
         protected override void OnAttachedToLogicalTree(LogicalTreeAttachmentEventArgs e)
@@ -1220,7 +1234,7 @@ namespace AvaloniaEdit
             set => SetValue(HorizontalScrollBarVisibilityProperty, value);
         }
 
-        private ScrollBarVisibility _horizontalScrollBarVisibilityBck = ScrollBarVisibility.Auto;
+        //private ScrollBarVisibility _horizontalScrollBarVisibilityBck = ScrollBarVisibility.Auto;
 
         /// <summary>
         /// Dependency property for <see cref="VerticalScrollBarVisibility"/>

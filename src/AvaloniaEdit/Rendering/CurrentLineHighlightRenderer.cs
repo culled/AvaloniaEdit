@@ -87,7 +87,7 @@ namespace AvaloniaEdit.Rendering
             var visualLine = _textView.GetVisualLine(_line);
             if (visualLine == null) return;
 
-            var linePosY = visualLine.VisualTop - _textView.ScrollOffset.Y;
+            var linePosY = visualLine.VisualTop - _textView.ScrollOffset.Y + _textView.DocumentMargin.Top;
 
             builder.AddRectangle(textView, new Rect(0, linePosY, textView.Bounds.Width, visualLine.Height));
 

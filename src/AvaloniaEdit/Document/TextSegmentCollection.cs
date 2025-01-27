@@ -72,6 +72,11 @@ namespace AvaloniaEdit.Document
         private TextSegment _root;
         private readonly bool _isConnectedToDocument;
 
+        /// <summary>
+        /// Gets/sets the type of movement for the end of text segments when text is inserted at their ends
+        /// </summary>
+        public AnchorMovementType EndAnchorMovementType = AnchorMovementType.BeforeInsertion;
+
         #region Constructor
         /// <summary>
         /// Creates a new TextSegmentCollection that needs manual calls to <see cref="UpdateOffsets(DocumentChangeEventArgs)"/>.
@@ -173,7 +178,8 @@ namespace AvaloniaEdit.Document
             // enlarge segments that contain offset (excluding those that have offset as endpoint)
             foreach (var segment in FindSegmentsContaining(offset))
             {
-                if (segment.StartOffset < offset && offset < segment.EndOffset)
+                if (segment.StartOffset < offset && ((EndAnchorMovementType == AnchorMovementType.BeforeInsertion && offset < segment.EndOffset) ||
+                    (EndAnchorMovementType == AnchorMovementType.AfterInsertion && offset <= segment.EndOffset)))
                 {
                     segment.Length += length;
                 }

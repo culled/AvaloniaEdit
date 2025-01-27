@@ -563,7 +563,7 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
+            pos -= textView.DocumentBounds.TopLeft;
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null && line.TextLines != null)
             {
@@ -594,7 +594,7 @@ namespace AvaloniaEdit.Editing
                 pos = pos.WithY(0);
             if (pos.Y > textView.Bounds.Height)
                 pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
+            pos -= textView.DocumentBounds.TopLeft;
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             return line != null && line.TextLines != null
                 ? new SimpleSegment(line.StartOffset, line.LastDocumentLine.EndOffset - line.StartOffset)
@@ -611,13 +611,12 @@ namespace AvaloniaEdit.Editing
             visualColumn = 0;
             var textView = TextArea.TextView;
             var pos = positionRelativeToTextView;
-            if (pos.Y < 0)
-                pos = pos.WithY(0);
-            if (pos.Y > textView.Bounds.Height)
-                pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
-            if (pos.Y >= textView.DocumentHeight)
-                pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            pos -= textView.DocumentBounds.TopLeft;
+            if (pos.Y < textView.DocumentPadding.Top)
+                pos = pos.WithY(textView.DocumentPadding.Top);
+            var bottom = textView.DocumentHeight - textView.DocumentPadding.Bottom;
+            if (pos.Y >= bottom)
+                pos = pos.WithY(bottom - ExtensionMethods.Epsilon);
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null && line.TextLines != null)
             {
@@ -633,13 +632,12 @@ namespace AvaloniaEdit.Editing
             visualColumn = 0;
             var textView = TextArea.TextView;
             var pos = positionRelativeToTextView;
-            if (pos.Y < 0)
-                pos = pos.WithY(0);
-            if (pos.Y > textView.Bounds.Height)
-                pos = pos.WithY(textView.Bounds.Height);
-            pos += textView.ScrollOffset;
-            if (pos.Y >= textView.DocumentHeight)
-                pos = pos.WithY(textView.DocumentHeight - ExtensionMethods.Epsilon);
+            pos -= textView.DocumentBounds.TopLeft;
+            if (pos.Y < textView.DocumentPadding.Top)
+                pos = pos.WithY(textView.DocumentPadding.Top);
+            var bottom = textView.DocumentHeight - textView.DocumentPadding.Bottom;
+            if (pos.Y >= bottom)
+                pos = pos.WithY(bottom - ExtensionMethods.Epsilon);
             var line = textView.GetVisualLineFromVisualTop(pos.Y);
             if (line != null && line.TextLines != null)
             {

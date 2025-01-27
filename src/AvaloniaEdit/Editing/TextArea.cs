@@ -757,6 +757,21 @@ namespace AvaloniaEdit.Editing
             get => GetValue(RightClickMovesCaretProperty);
             set => SetValue(RightClickMovesCaretProperty, value);
         }
+
+        /// <summary>
+        /// The <see cref="NormalizeNewLinesProperty"/> property.
+        /// </summary>
+        public static readonly StyledProperty<bool> NormalizeNewLinesProperty
+            = AvaloniaProperty.Register<TextArea, bool>(nameof(NormalizeNewLines));
+
+        /// <summary>
+        /// Gets/sets if new lines are normalized to '\n' or not
+        /// </summary>
+        public bool NormalizeNewLines
+        {
+            get => GetValue(NormalizeNewLinesProperty);
+            set => SetValue(NormalizeNewLinesProperty, value);
+        }
         #endregion
 
         #region Focus Handling (Show/Hide Caret)
@@ -865,6 +880,13 @@ namespace AvaloniaEdit.Editing
                 throw new ArgumentNullException(nameof(e));
             if (Document == null)
                 throw ThrowUtil.NoDocumentAssigned();
+
+            // Override the newlines if needed
+            if (NormalizeNewLines)
+            {
+                e.Text = TextUtilities.NormalizeNewLines(e.Text, "\n");
+            }
+
             OnTextEntering(e);
             if (!e.Handled)
             {
@@ -884,7 +906,7 @@ namespace AvaloniaEdit.Editing
 
         private void ReplaceSelectionWithNewLine()
         {
-            var newLine = TextUtilities.GetNewLineFromDocument(Document, Caret.Line);
+            var newLine = NormalizeNewLines ? "\n" : TextUtilities.GetNewLineFromDocument(Document, Caret.Line);
             using (Document.RunUpdate())
             {
                 ReplaceSelectionWithText(newLine);

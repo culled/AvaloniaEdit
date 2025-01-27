@@ -105,8 +105,8 @@ namespace AvaloniaEdit.Editing
                     }
                 }
 
-                var r = new Rect(_caretRectangle.X - TextView.HorizontalOffset,
-                                  _caretRectangle.Y - TextView.VerticalOffset,
+                var r = new Rect(_caretRectangle.X + TextView.DocumentBounds.Left,
+                                  _caretRectangle.Y + TextView.DocumentBounds.Top,
                                   _caretRectangle.Width,
                                   _caretRectangle.Height);
 
