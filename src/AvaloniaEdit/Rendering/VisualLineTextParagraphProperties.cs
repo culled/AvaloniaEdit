@@ -54,7 +54,7 @@ namespace AvaloniaEdit.Rendering
 
 		public Document.DocumentLineFormat.TextCasingMode TextCasing => textCasing;
 
-		public VisualLineTextParagraphProperties ApplyOverrides(DocumentLineFormat lineFormat)
+		public VisualLineTextParagraphProperties ApplyOverrides(DocumentLineFormat lineFormat, Thickness extraMargins)
 		{
             return new VisualLineTextParagraphProperties()
 			{
@@ -63,7 +63,7 @@ namespace AvaloniaEdit.Rendering
 				tabSize = tabSize,
 				indent = indent,
 				firstLineInParagraph = firstLineInParagraph,
-				margins = lineFormat.Margins,
+				margins = lineFormat.Margins + extraMargins,
 				lineSpacingPercentage =	lineFormat.HasLineSpacingOverride ? lineFormat.LineSpacingPercentage : lineSpacingPercentage,
                 textCasing = lineFormat.TextCasing
             };

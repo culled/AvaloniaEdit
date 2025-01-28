@@ -1100,7 +1100,7 @@ namespace AvaloniaEdit.Rendering
             //Debug.WriteLine("Building line " + documentLine.LineNumber);
 
             //Transfer any line-specific formatting
-            var overriddenParagraphProperties = paragraphProperties.ApplyOverrides(documentLine.LineFormat);
+            var overriddenParagraphProperties = paragraphProperties.ApplyOverrides(documentLine.LineFormat, new Thickness(DocumentPadding.Left, 0, DocumentPadding.Right, 0));
 
             VisualLine visualLine = new VisualLine(this, documentLine, overriddenParagraphProperties);
             VisualLineTextSource textSource = new VisualLineTextSource(visualLine)
@@ -1134,13 +1134,14 @@ namespace AvaloniaEdit.Rendering
             TextLineBreak lastLineBreak = null;
             var textOffset = 0;
             var textLines = new List<TextLine>();
+            double widthAfterMargin = availableSize.Width - (overriddenParagraphProperties.Margins.Right + overriddenParagraphProperties.Margins.Left);
 
             while (textOffset <= visualLine.VisualLengthWithEndOfLineMarker)
             {
                 var textLine = _formatter.FormatLine(
                     textSource,
                     textOffset,
-                    availableSize.Width - (visualLine.Margins.Left + visualLine.Margins.Right),
+                    widthAfterMargin,
                     paragraphProperties,
                     lastLineBreak
                 );
@@ -1364,7 +1365,7 @@ namespace AvaloniaEdit.Rendering
             else
             {
                 // this is necessary so hit-testing works properly and events get tunneled to the TextView.
-                drawingContext.FillRectangle(Brushes.Transparent, Bounds);
+                drawingContext.FillRectangle(Brushes.Transparent, backgroundBounds);
             }
 
             foreach (var bg in _backgroundRenderers)
