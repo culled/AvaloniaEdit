@@ -1140,7 +1140,7 @@ namespace AvaloniaEdit.Rendering
                 var textLine = _formatter.FormatLine(
                     textSource,
                     textOffset,
-                    availableSize.Width,
+                    availableSize.Width - (visualLine.Margins.Left + visualLine.Margins.Right),
                     paragraphProperties,
                     lastLineBreak
                 );
@@ -1904,14 +1904,14 @@ namespace AvaloniaEdit.Rendering
         /// <summary>
         /// Gets/sets the document's background color. This will be the color directly behind the text
         /// </summary>
-        public SolidColorBrush DocumentBackgroundBrush
+        public IBrush DocumentBackgroundBrush
         {
             get => GetValue(DocumentBackgroundBrushProperty);
             set => SetValue(DocumentBackgroundBrushProperty, value);
         }
 
-        public static readonly StyledProperty<SolidColorBrush> DocumentBackgroundBrushProperty
-            = AvaloniaProperty.Register<TextView, SolidColorBrush>(nameof(DocumentBackgroundBrush));
+        public static readonly StyledProperty<IBrush> DocumentBackgroundBrushProperty
+            = AvaloniaProperty.Register<TextView, IBrush>(nameof(DocumentBackgroundBrush));
         #endregion
 
         #region PointerHover

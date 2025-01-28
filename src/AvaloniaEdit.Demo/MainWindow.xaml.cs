@@ -96,11 +96,13 @@ namespace AvaloniaEdit.Demo
                 "// AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
                 "// AvaloniaEdit supports displaying underline and strikethrough" + Environment.NewLine +
                 ResourceLoader.LoadSampleFile(scopeName));
+
             DocumentLineFormat fmt = new()
             {
                 Margins = new Thickness(32)
             };
             _textEditor.Document.SetLineFormat(fmt, _textEditor.Document.GetLineByNumber(1));
+
             _textMateInstallation.SetGrammar(_registryOptions.GetScopeByLanguageId(csharpLanguage.Id));
             _textEditor.TextArea.TextView.LineTransformers.Add(new UnderlineAndStrikeThroughTransformer());
 
