@@ -719,5 +719,24 @@ namespace AvaloniaEdit
                 }
             }
         }
+
+        private double _minimumCaretDistanceToViewBorder = 40.0;
+
+        /// <summary>
+        /// Gets/Sets the default line spacing percentage
+        /// </summary>
+        [DefaultValue(40.0)]
+        public double MinimumCaretDistanceToViewBorder
+        {
+            get => _minimumCaretDistanceToViewBorder;
+            set
+            {
+                if (!_minimumCaretDistanceToViewBorder.IsClose(value))
+                {
+                    _minimumCaretDistanceToViewBorder = value;
+                    OnPropertyChanged(nameof(MinimumCaretDistanceToViewBorder));
+                }
+            }
+        }
     }
 }

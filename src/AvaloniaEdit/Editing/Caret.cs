@@ -453,14 +453,14 @@ namespace AvaloniaEdit.Editing
         /// <summary>
         /// Minimum distance of the caret to the view border.
         /// </summary>
-        internal const double MinimumDistanceToViewBorder = 0;
+        //internal const double MinimumDistanceToViewBorder = 30;
 
         /// <summary>
         /// Scrolls the text view so that the caret is visible.
         /// </summary>
         public void BringCaretToView()
         {
-            BringCaretToView(0);
+            BringCaretToView(_textView.Options.MinimumCaretDistanceToViewBorder);
         }
 
         public void BringCaretToView(double border)

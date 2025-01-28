@@ -1347,7 +1347,7 @@ namespace AvaloniaEdit
 
                 if (column > 0)
                 {
-                    if (p.X > ScrollViewer.Viewport.Width - Caret.MinimumDistanceToViewBorder * 2)
+                    if (p.X > ScrollViewer.Viewport.Width - Options.MinimumCaretDistanceToViewBorder * 2)
                     {
                         double horizontalPos = Math.Max(0, p.X - ScrollViewer.Viewport.Width / 2);
                         if (Math.Abs(horizontalPos - ScrollViewer.Offset.X) >

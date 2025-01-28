@@ -949,8 +949,9 @@ namespace AvaloniaEdit.Rendering
                     // HACK: we need to keep at least Caret.MinimumDistanceToViewBorder visible so that we don't scroll back up when the user types after
                     // scrolling to the very bottom.
                     var minVisibleDocumentHeight = DefaultLineHeight;
+                    heightTreeHeight = Math.Max(heightTreeHeight, availableSize.Height);
                     // increase the extend height to allow scrolling below the document
-                    extraHeightToAllowScrollBelowDocument = desiredHeight - minVisibleDocumentHeight;
+                    extraHeightToAllowScrollBelowDocument = (availableSize.Height * 0.5) - minVisibleDocumentHeight;
                 }
             }
 

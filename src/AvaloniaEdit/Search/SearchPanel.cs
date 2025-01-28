@@ -437,7 +437,7 @@ namespace AvaloniaEdit.Search
             _textArea.Selection = Selection.Create(_textArea, result.StartOffset, result.EndOffset);
 
             double distanceToViewBorder = _border == null ?
-                Caret.MinimumDistanceToViewBorder :
+                _textArea.Options.MinimumCaretDistanceToViewBorder :
                 _border.Bounds.Height + _textArea.TextView.DefaultLineHeight;
             _textArea.Caret.BringCaretToView(distanceToViewBorder);
 
