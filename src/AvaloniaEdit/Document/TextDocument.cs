@@ -1256,7 +1256,7 @@ namespace AvaloniaEdit.Document
         /// </summary>
         /// <param name="format">The format to apply</param>
         /// <param name="lineNumbers">A list of line numbers to apply the formatting to</param>
-        public void SetLineFormats(DocumentLineFormat format, List<int> lineNumbers)
+        public void SetLineFormats(DocumentLineFormat format, IEnumerable<int> lineNumbers)
         {
             var changes = new Dictionary<int, DocumentLineFormat>();
 
