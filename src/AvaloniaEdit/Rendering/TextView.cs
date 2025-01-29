@@ -1030,7 +1030,7 @@ namespace AvaloniaEdit.Rendering
 
                 foreach (var textLine in visualLine.TextLines)
                 {
-                    double width = textLine.WidthIncludingTrailingWhitespace + visualLine.Margins.Left + visualLine.Margins.Right;
+                    double width = textLine.WidthIncludingTrailingWhitespace + visualLine.LineProperties.Margins.Left + visualLine.LineProperties.Margins.Right;
 
                     if (width > maxWidth)
                         maxWidth = width;
@@ -1101,13 +1101,13 @@ namespace AvaloniaEdit.Rendering
             //Debug.WriteLine("Building line " + documentLine.LineNumber);
 
             //Transfer any line-specific formatting
-            var overriddenParagraphProperties = paragraphProperties.ApplyOverrides(documentLine.LineFormat, new Thickness(DocumentPadding.Left, 0, DocumentPadding.Right, 0));
+            paragraphProperties = paragraphProperties.ApplyOverrides(documentLine.LineFormat, new Thickness(DocumentPadding.Left, 0, DocumentPadding.Right, 0));
 
-            VisualLine visualLine = new VisualLine(this, documentLine, overriddenParagraphProperties);
+            VisualLine visualLine = new VisualLine(this, documentLine, paragraphProperties);
             VisualLineTextSource textSource = new VisualLineTextSource(visualLine)
             {
                 Document = _document,
-                GlobalTextRunProperties = overriddenParagraphProperties.defaultTextRunProperties,
+                GlobalTextRunProperties = paragraphProperties.defaultTextRunProperties,
                 TextView = this
             };
 
@@ -1135,7 +1135,7 @@ namespace AvaloniaEdit.Rendering
             TextLineBreak lastLineBreak = null;
             var textOffset = 0;
             var textLines = new List<TextLine>();
-            double widthAfterMargin = availableSize.Width - (overriddenParagraphProperties.Margins.Right + overriddenParagraphProperties.Margins.Left);
+            double widthAfterMargin = availableSize.Width - (paragraphProperties.Margins.Right + paragraphProperties.Margins.Left);
 
             while (textOffset <= visualLine.VisualLengthWithEndOfLineMarker)
             {

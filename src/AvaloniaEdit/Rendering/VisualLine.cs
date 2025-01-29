@@ -126,9 +126,9 @@ namespace AvaloniaEdit.Rendering
         public double VisualTop { get; internal set; }
 
         /// <summary>
-        /// Gets the margins of the line in device-independent pixels.
+        /// Gets the properties for this line
         /// </summary>
-        public Thickness Margins { get; private set; }
+        internal VisualLineTextParagraphProperties LineProperties { get; private set; }
 
         internal VisualLine(TextView textView, DocumentLine firstDocumentLine, VisualLineTextParagraphProperties lineProperties)
         {
@@ -137,7 +137,7 @@ namespace AvaloniaEdit.Rendering
             _textView = textView;
             Document = textView.Document;
             FirstDocumentLine = firstDocumentLine;
-            Margins = lineProperties.Margins;
+            LineProperties = lineProperties;
         }
 
         internal void ConstructVisualElements(ITextRunConstructionContext context, IReadOnlyList<VisualLineElementGenerator> generators)
@@ -308,7 +308,7 @@ namespace AvaloniaEdit.Rendering
         internal void SetTextLines(List<TextLine> textLines)
         {
             _textLines = new ReadOnlyCollection<TextLine>(textLines);
-            Height = Margins.Top + Margins.Bottom;
+            Height = LineProperties.Margins.Top + LineProperties.Margins.Bottom;
             foreach (var line in textLines)
                 Height += line.Height;
         }
@@ -384,7 +384,7 @@ namespace AvaloniaEdit.Rendering
         {
             if (textLine == null)
                 throw new ArgumentNullException(nameof(textLine));
-            var pos = VisualTop + Margins.Top;
+            var pos = VisualTop + LineProperties.Margins.Top;
             foreach (var tl in TextLines)
             {
                 if (tl == textLine)
@@ -431,7 +431,7 @@ namespace AvaloniaEdit.Rendering
         public TextLine GetTextLineByVisualYPosition(double visualTop)
         {
             const double epsilon = 0.0001;
-            var pos = VisualTop + Margins.Top;
+            var pos = VisualTop + LineProperties.Margins.Top;
             foreach (var tl in TextLines)
             {
                 pos += tl.Height;
@@ -472,7 +472,7 @@ namespace AvaloniaEdit.Rendering
             if (textLine == null)
                 throw new ArgumentNullException(nameof(textLine));
 
-            var xPos = textLine.GetDistanceFromCharacterHit(new CharacterHit(Math.Min(visualColumn, VisualLengthWithEndOfLineMarker))) + Margins.Left;
+            var xPos = textLine.GetDistanceFromCharacterHit(new CharacterHit(Math.Min(visualColumn, VisualLengthWithEndOfLineMarker))) + LineProperties.Margins.Left;
 
             if (visualColumn > VisualLengthWithEndOfLineMarker)
             {
@@ -514,7 +514,7 @@ namespace AvaloniaEdit.Rendering
         /// </summary>
         public int GetVisualColumn(TextLine textLine, double xPos, bool allowVirtualSpace)
         {
-            xPos -= Margins.Left;
+            xPos -= LineProperties.Margins.Left;
             if (xPos > textLine.WidthIncludingTrailingWhitespace)
             {
                 if (allowVirtualSpace && textLine == TextLines[TextLines.Count - 1])
@@ -580,7 +580,7 @@ namespace AvaloniaEdit.Rendering
 
         internal int GetVisualColumnFloor(Point point, bool allowVirtualSpace, out bool isAtEndOfLine)
         {
-            point = point.WithX(point.X - Margins.Left);
+            point = point.WithX(point.X - LineProperties.Margins.Left);
             var textLine = GetTextLineByVisualYPosition(point.Y);
             if (point.X > textLine.WidthIncludingTrailingWhitespace)
             {
@@ -806,15 +806,15 @@ namespace AvaloniaEdit.Rendering
         public VisualLineDrawingVisual(VisualLine visualLine)
         {
             VisualLine = visualLine;
-            LineHeight = VisualLine.Margins.Top + VisualLine.Margins.Bottom + VisualLine.TextLines.Sum(textLine => textLine.Height);
+            LineHeight = VisualLine.LineProperties.Margins.Top + VisualLine.LineProperties.Margins.Bottom + VisualLine.TextLines.Sum(textLine => textLine.Height);
         }
 
         public override void Render(DrawingContext context)
         {
-            double pos = VisualLine.Margins.Top;
+            double pos = VisualLine.LineProperties.Margins.Top;
             foreach (var textLine in VisualLine.TextLines)
             {
-                textLine.Draw(context, new Point(VisualLine.Margins.Left, pos));
+                textLine.Draw(context, new Point(VisualLine.LineProperties.Margins.Left, pos));
                 pos += textLine.Height;
             }
         }

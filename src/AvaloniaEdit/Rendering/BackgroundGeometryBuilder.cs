@@ -228,8 +228,8 @@ namespace AvaloniaEdit.Rendering
 				} else {
 					if (segmentStartVcInLine <= visualEndCol) {
 						foreach (var b in line.GetTextBounds(segmentStartVcInLine, segmentEndVcInLine - segmentStartVcInLine)) {
-                            var left = b.Rectangle.Left + offset.X + visualLine.Margins.Left;
-                            var right = b.Rectangle.Right + offset.X + visualLine.Margins.Left;
+                            var left = b.Rectangle.Left + offset.X + visualLine.LineProperties.Margins.Left;
+                            var right = b.Rectangle.Right + offset.X + visualLine.LineProperties.Margins.Left;
                             if (lastRect != default)
 								yield return lastRect;
 							// left>right is possible in RTL languages

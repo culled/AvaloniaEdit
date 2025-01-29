@@ -68,6 +68,19 @@ namespace AvaloniaEdit.Rendering
 				offset,
 				DocumentLength - relativeOffset);
 
+			// Change casing if the line style requires it
+			switch(ParentVisualLine.LineProperties.textCasing)
+			{
+				case DocumentLineFormat.TextCasingMode.AllUpper:
+					text = new Utils.StringSegment(text.Text.ToUpper(), text.Offset, text.Count);
+					break;
+				case DocumentLineFormat.TextCasingMode.AllLower:
+                    text = new Utils.StringSegment(text.Text.ToLower(), text.Offset, text.Count);
+                    break;
+				default:
+					break;
+            }
+
 			var textSlice = text.Text.AsMemory().Slice(text.Offset, text.Count);
 
             return new TextCharacters(textSlice, TextRunProperties);
