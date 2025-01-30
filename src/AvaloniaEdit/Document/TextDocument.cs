@@ -456,7 +456,7 @@ namespace AvaloniaEdit.Document
                 else
                 {
                     _undoDescriptor = new object();
-                    _undoStack.StartUndoGroup();
+                    _undoStack.StartUndoGroup(_undoDescriptor.GetHashCode());
                 }
                 UpdateStarted?.Invoke(this, EventArgs.Empty);
             }
