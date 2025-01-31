@@ -125,6 +125,12 @@ namespace AvaloniaEdit.Editing
 
             if (e.NameScope.Find("PART_CP") is ContentPresenter contentPresenter)
             {
+                //If the parent view is reloaded, a new content parent will be created, so we must first disconnect from the previous parent
+                if (TextView.Parent is ContentPresenter parentPresenter)
+                {
+                    parentPresenter.Content = null;
+                }
+
                 contentPresenter.Content = TextView;
             }
         }
