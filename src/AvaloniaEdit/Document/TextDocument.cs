@@ -441,7 +441,7 @@ namespace AvaloniaEdit.Document
         /// of EndUpdate calls the events resume their work.</para>
         /// </summary>
         /// <remarks><inheritdoc cref="Changing"/></remarks>
-        public void BeginUpdate()
+        public void BeginUpdate(object undoGroupDescriptor = null)
         {
             VerifyAccess();
             if (InDocumentChanging)
@@ -449,14 +449,13 @@ namespace AvaloniaEdit.Document
             _beginUpdateCount++;
             if (_beginUpdateCount == 1)
             {
-                if (_undoDescriptor != null && _undoStack.LastGroupDescriptor is int hash && hash == _undoDescriptor.GetHashCode())
+                if (undoGroupDescriptor != null)
                 {
-                    _undoStack.StartContinuedUndoGroup(hash);
+                    _undoStack.StartContinuedUndoGroup(undoGroupDescriptor);
                 }
                 else
                 {
-                    _undoDescriptor = new object();
-                    _undoStack.StartUndoGroup(_undoDescriptor.GetHashCode());
+                    _undoStack.StartUndoGroup(undoGroupDescriptor);
                 }
                 UpdateStarted?.Invoke(this, EventArgs.Empty);
             }
@@ -814,9 +813,31 @@ namespace AvaloniaEdit.Document
             text = text?.CreateSnapshot() ?? throw new ArgumentNullException(nameof(text));
             offsetChangeMap?.Freeze();
 
+            // Only continue the undo group if a letter, number, or mark was inserted
+            // TODO: deleting text doesn't chain properly
+            if (text.TextLength == 1 || length == 1)
+            {
+                bool insert = text.TextLength > 0;
+                CharacterClass charClass = TextUtilities.GetCharacterClass(insert ? text.GetCharAt(0) : _rope[offset]);
+
+                if (charClass == CharacterClass.IdentifierPart)
+                {
+                    string tag = insert ? "insert" : "remove";
+
+                    if (_undoDescriptor is not string undoTag || undoTag != tag)
+                    {
+                        _undoDescriptor = tag;
+                    }
+                }
+            }
+            else
+            {
+                _undoDescriptor = null;
+            }
+
             // Ensure that all changes take place inside an update group.
             // Will also take care of throwing an exception if inDocumentChanging is set.
-            BeginUpdate();
+            BeginUpdate(_undoDescriptor);
             try
             {
                 // protect document change against corruption by other changes inside the event handlers
@@ -872,21 +893,6 @@ namespace AvaloniaEdit.Document
             TextChangingInternal?.Invoke(this, args);
 
             _undoStack.Push(this, args);
-
-            //Only continue the undo group if a letter, number, or mark was inserted
-            if (newText.TextLength == 1 && removedText.TextLength == 0)
-            {
-                CharacterClass charClass = TextUtilities.GetCharacterClass(newText.GetCharAt(0));
-
-                if (charClass != CharacterClass.IdentifierPart)
-                {
-                    _undoDescriptor = null;
-                }
-            }
-            else
-            {
-                _undoDescriptor = null;
-            }
 
             _cachedText = null; // reset cache of complete document text
             _fireTextChanged = true;
