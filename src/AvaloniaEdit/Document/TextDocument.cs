@@ -1301,55 +1301,43 @@ namespace AvaloniaEdit.Document
             //Stop the previous chained undo group
             _undoDescriptor = null;
 
-            // Ensure that all changes take place inside an update group.
-            // Will also take care of throwing an exception if inDocumentChanging is set.
-            BeginUpdate();
+            UndoStack.StartUndoGroup();
+
             try
             {
-                // protect document change against corruption by other changes inside the event handlers
-                InDocumentChanging = true;
-                try
+                var changeOperations = new List<DocumentFormatChangeEventArgs.DocumentLineFormatChange>();
+                int startOffset = -1, endOffset = -1;
+
+                foreach (var kvp in changes)
                 {
-                    var changeOperations = new List<DocumentFormatChangeEventArgs.DocumentLineFormatChange>();
-                    int startOffset = -1, endOffset = -1;
+                    DocumentLine line = GetLineByNumber(kvp.Key);
 
-                    foreach (var kvp in changes)
+                    DocumentLineFormat oldFormat = line.LineFormat;
+                    line.LineFormat = kvp.Value;
+
+                    if (startOffset == -1)
                     {
-                        DocumentLine line = GetLineByNumber(kvp.Key);
-
-                        DocumentLineFormat oldFormat = line.LineFormat;
-                        line.LineFormat = kvp.Value;
-
-                        if (startOffset == -1)
-                        {
-                            startOffset = line.Offset;
-                            endOffset = line.EndOffset;
-                        }
-                        else
-                        {
-                            startOffset = Math.Min(startOffset, line.Offset);
-                            endOffset = Math.Max(endOffset, line.EndOffset);
-                        }
-
-                        changeOperations.Add(new DocumentFormatChangeEventArgs.DocumentLineFormatChange(line.LineNumber, oldFormat, kvp.Value));
+                        startOffset = line.Offset;
+                        endOffset = line.EndOffset;
+                    }
+                    else
+                    {
+                        startOffset = Math.Min(startOffset, line.Offset);
+                        endOffset = Math.Max(endOffset, line.EndOffset);
                     }
 
-                    var args = new DocumentFormatChangeEventArgs(changeOperations, startOffset, endOffset - startOffset);
-                    _undoStack.Push(new DocumentFormatChangeOperation(this, args));
+                    changeOperations.Add(new DocumentFormatChangeEventArgs.DocumentLineFormatChange(line.LineNumber, oldFormat, kvp.Value));
+                }
 
-                    FormatChanged?.Invoke(this, args);
-                }
-                finally
-                {
-                    InDocumentChanging = false;
-                }
+                var args = new DocumentFormatChangeEventArgs(changeOperations, startOffset, endOffset - startOffset);
+                _undoStack.Push(new DocumentFormatChangeOperation(this, args));
+
+                FormatChanged?.Invoke(this, args);
             }
             finally
             {
                 //Ensure this undo won't be chained
-                _undoDescriptor = null;
-
-                EndUpdate();
+                UndoStack.EndUndoGroup();
             }
         }
 

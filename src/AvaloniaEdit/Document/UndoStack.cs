@@ -80,6 +80,7 @@ namespace AvaloniaEdit.Document
         public void MarkAsOriginalFile()
         {
             _elementsOnUndoUntilOriginalFile = 0;
+            LastGroupDescriptor = null;
             RecalcIsOriginalFile();
         }
 
@@ -89,6 +90,7 @@ namespace AvaloniaEdit.Document
         public void DiscardOriginalFileMarker()
         {
             _elementsOnUndoUntilOriginalFile = int.MinValue;
+            LastGroupDescriptor = null;
             RecalcIsOriginalFile();
         }
 
