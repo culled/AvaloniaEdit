@@ -268,6 +268,32 @@ namespace AvaloniaEdit.Highlighting
         }
 
         /// <summary>
+        /// Sets the underline on the specified text segment.
+        /// </summary>
+        public void SetUnderline(int offset, int length, bool underline)
+        {
+            var startIndex = GetIndexForOffset(offset);
+            var endIndex = GetIndexForOffset(offset + length);
+            for (var i = startIndex; i < endIndex; i++)
+            {
+                _stateChanges[i].Underline = underline;
+            }
+        }
+
+        /// <summary>
+        /// Sets the strikethrough on the specified text segment.
+        /// </summary>
+        public void SetStrikethrough(int offset, int length, bool strikethrough)
+        {
+            var startIndex = GetIndexForOffset(offset);
+            var endIndex = GetIndexForOffset(offset + length);
+            for (var i = startIndex; i < endIndex; i++)
+            {
+                _stateChanges[i].Strikethrough = strikethrough;
+            }
+        }
+
+        /// <summary>
         /// Retrieves the highlighted sections in the specified range.
         /// The highlighted sections will be sorted by offset, and there will not be any nested or overlapping sections.
         /// </summary>
