@@ -33,7 +33,7 @@ namespace AvaloniaEdit.Editing
     public sealed class Caret
     {
         private const double CaretWidth = 0.5;
-        private const double CaretBelowBaseline = 3;
+        private const double CaretBelowBaseline = 0;
 
         private readonly TextArea _textArea;
         private readonly TextView _textView;
