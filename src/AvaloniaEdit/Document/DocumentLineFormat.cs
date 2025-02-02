@@ -1,11 +1,10 @@
 ﻿using Avalonia;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace AvaloniaEdit.Document
 {
-    public struct DocumentLineFormat
+    public struct DocumentLineFormat : IEquatable<DocumentLineFormat>
     {
         #region Tag
         /// <summary>
@@ -195,5 +194,34 @@ namespace AvaloniaEdit.Document
 
             return format;
         }
+
+        #region IEquatable
+        public override bool Equals(object obj)
+        {
+            if(obj is DocumentLineFormat fmt)
+                return Equals(fmt);
+
+            return false;
+        }
+
+        public bool Equals(DocumentLineFormat other)
+        {
+            return Tag == other.Tag &&
+                Margins.Equals(other.Margins) &&
+                LineSpacingPercentage.Equals(other.LineSpacingPercentage) &&
+                TextCasing == other.TextCasing;
+        }
+
+        public override int GetHashCode()
+        {
+            int hash = 17;
+            hash = hash * 31 + Tag.GetHashCode();
+            hash = hash * 31 + Margins.GetHashCode();
+            hash = hash * 31 + LineSpacingPercentage.GetHashCode();
+            hash = hash * 31 + TextCasing.GetHashCode();
+
+            return hash;
+        }
+        #endregion
     }
 }
