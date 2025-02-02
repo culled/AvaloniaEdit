@@ -40,6 +40,16 @@ namespace AvaloniaEdit.Document
         /// during Undo events
         internal int State { get; set; } = StateListen;
 
+        /// <summary>
+        /// If true, this undo stack is currently playing undo/redo states, else it is listening for state changes
+        /// </summary>
+        public bool IsInUndoRedo => State != StateListen;
+
+        /// <summary>
+        /// Event fired when an undo/redo operation has completed
+        /// </summary>
+        public event EventHandler OnUndoRedoCompleted;
+
         private readonly Deque<IUndoableOperation> _undostack = new Deque<IUndoableOperation>();
         private readonly Deque<IUndoableOperation> _redostack = new Deque<IUndoableOperation>();
         private int _sizeLimit = int.MaxValue;
@@ -314,6 +324,7 @@ namespace AvaloniaEdit.Document
                     CallEndUpdateOnAffectedDocuments();
                 }
                 RecalcIsOriginalFile();
+                OnUndoRedoCompleted.Invoke(this, new EventArgs());
                 if (_undostack.Count == 0)
                     NotifyPropertyChanged("CanUndo");
                 if (_redostack.Count == 1)
@@ -353,6 +364,7 @@ namespace AvaloniaEdit.Document
                     CallEndUpdateOnAffectedDocuments();
                 }
                 RecalcIsOriginalFile();
+                OnUndoRedoCompleted.Invoke(this, new EventArgs());
                 if (_redostack.Count == 0)
                     NotifyPropertyChanged("CanRedo");
                 if (_undostack.Count == 1)
