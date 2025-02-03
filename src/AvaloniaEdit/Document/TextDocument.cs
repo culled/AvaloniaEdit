@@ -1307,7 +1307,8 @@ namespace AvaloniaEdit.Document
             //Stop the previous chained undo group
             _undoDescriptor = null;
 
-            UndoStack.StartUndoGroup();
+            if(!InDocumentChanging)
+                UndoStack.StartUndoGroup();
 
             try
             {
@@ -1343,7 +1344,8 @@ namespace AvaloniaEdit.Document
             finally
             {
                 //Ensure this undo won't be chained
-                UndoStack.EndUndoGroup();
+                if (!InDocumentChanging)
+                    UndoStack.EndUndoGroup();
             }
         }
 

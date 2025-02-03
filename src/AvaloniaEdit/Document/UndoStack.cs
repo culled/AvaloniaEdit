@@ -216,7 +216,7 @@ namespace AvaloniaEdit.Document
         {
             if (_undoGroupDepth == 0)
             {
-                _actionCountInUndoGroup = (_allowContinue && _undostack.Count > 0) ? 1 : 0;
+                _actionCountInUndoGroup = (_allowContinue && _undostack.Count > 0 && !IsOriginalFile) ? 1 : 0;
                 _optionalActionCount = 0;
                 LastGroupDescriptor = groupDescriptor;
             }
