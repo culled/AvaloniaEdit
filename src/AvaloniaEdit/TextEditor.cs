@@ -654,7 +654,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Copies the current selection to the clipboard.
         /// </summary>
-        public void Copy()
+        public virtual void Copy()
         {
             if (CanCopy)
             {
@@ -665,7 +665,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Removes the current selection and copies it to the clipboard.
         /// </summary>
-        public void Cut()
+        public virtual void Cut()
         {
             if (CanCut)
             {
@@ -776,7 +776,7 @@ namespace AvaloniaEdit
         /// <summary>
         /// Pastes the clipboard content.
         /// </summary>
-        public void Paste()
+        public virtual void Paste()
         {
             if (CanPaste)
             {
@@ -788,7 +788,7 @@ namespace AvaloniaEdit
         /// Redoes the most recent undone command.
         /// </summary>
         /// <returns>True is the redo operation was successful, false is the redo stack is empty.</returns>
-        public bool Redo()
+        public virtual bool Redo()
         {
             if (CanRedo)
             {
@@ -851,7 +851,7 @@ namespace AvaloniaEdit
         /// Undoes the most recent command.
         /// </summary>
         /// <returns>True is the undo operation was successful, false is the undo stack is empty.</returns>
-        public bool Undo()
+        public virtual bool Undo()
         {
             if (CanUndo)
             {
