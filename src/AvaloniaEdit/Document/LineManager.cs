@@ -180,14 +180,15 @@ namespace AvaloniaEdit.Document
             //endLine.RemovedLinePart(ref deferredEventList, 0, endLine.TotalLength - charactersLeftInEndLine);
             //startLine.MergedWith(endLine, offset - startLineOffset);
 
+            if (charactersRemovedInStartLine == startLine.TotalLength)
+                startLine.LineFormat = endLine.LineFormat;
+
             // remove all lines between startLine (excl.) and endLine (incl.)
             var tmp = startLine.NextLine;
             DocumentLine lineToRemove;
             do
             {
                 lineToRemove = tmp;
-                if(charactersRemovedInStartLine == startLine.TotalLength)
-                    startLine.LineFormat = lineToRemove.LineFormat;
                 tmp = tmp.NextLine;
                 RemoveLine(lineToRemove);
             } while (lineToRemove != endLine);
