@@ -186,7 +186,8 @@ namespace AvaloniaEdit.Document
             do
             {
                 lineToRemove = tmp;
-                startLine.LineFormat = lineToRemove.LineFormat;
+                if(charactersRemovedInStartLine == startLine.TotalLength)
+                    startLine.LineFormat = lineToRemove.LineFormat;
                 tmp = tmp.NextLine;
                 RemoveLine(lineToRemove);
             } while (lineToRemove != endLine);
