@@ -1779,6 +1779,9 @@ namespace AvaloniaEdit.Rendering
             VerifyAccess();
             if (Document == null)
                 throw ThrowUtil.NoDocumentAssigned();
+
+            visualPosition -= _documentBounds.TopLeft;
+
             var line = GetVisualLineFromVisualTop(visualPosition.Y);
             return line?.GetTextViewPosition(visualPosition, Options.EnableVirtualSpace);
         }
