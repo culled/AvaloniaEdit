@@ -319,9 +319,9 @@ namespace AvaloniaEdit.Document
                 }
                 finally
                 {
-                    State = StateListen;
                     FileModified(-1);
                     CallEndUpdateOnAffectedDocuments();
+                    State = StateListen;
                 }
                 RecalcIsOriginalFile();
                 OnUndoRedoCompleted.Invoke(this, new EventArgs());
@@ -359,9 +359,9 @@ namespace AvaloniaEdit.Document
                 }
                 finally
                 {
-                    State = StateListen;
                     FileModified(1);
                     CallEndUpdateOnAffectedDocuments();
+                    State = StateListen;
                 }
                 RecalcIsOriginalFile();
                 OnUndoRedoCompleted.Invoke(this, new EventArgs());
