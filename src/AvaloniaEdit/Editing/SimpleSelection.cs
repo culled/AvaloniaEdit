@@ -56,7 +56,18 @@ namespace AvaloniaEdit.Editing
         {
             if (newText == null)
                 throw new ArgumentNullException(nameof(newText));
-            using (TextArea.Document.RunUpdate())
+
+            object desc = null;
+
+            // Chain successive deletes if we're deleting a letter, number, or mark
+            if(newText.Length == 0 && 
+                SurroundingSegment.Length == 1 &&
+                TextUtilities.GetCharacterClass(TextArea.Document.GetCharAt(SurroundingSegment.Offset)) == CharacterClass.IdentifierPart)
+            {
+                desc = "remove";
+            }
+
+            using (TextArea.Document.RunUpdate(desc))
             {
                 var segmentsToDelete = TextArea.GetDeletableSegments(SurroundingSegment);
                 for (var i = segmentsToDelete.Length - 1; i >= 0; i--)

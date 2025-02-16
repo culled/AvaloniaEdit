@@ -427,9 +427,9 @@ namespace AvaloniaEdit.Document
         /// and returns an IDisposable that calls <see cref="EndUpdate()"/>.
         /// </summary>
         /// <remarks><inheritdoc cref="BeginUpdate"/></remarks>
-        public IDisposable RunUpdate()
+        public IDisposable RunUpdate(object undoGroupDescriptor = null)
         {
-            BeginUpdate();
+            BeginUpdate(undoGroupDescriptor);
             return new CallbackOnDispose(EndUpdate);
         }
 
@@ -449,7 +449,7 @@ namespace AvaloniaEdit.Document
             _beginUpdateCount++;
             if (_beginUpdateCount == 1)
             {
-                if (undoGroupDescriptor != null)
+                if (undoGroupDescriptor != null && undoGroupDescriptor.Equals(_undoStack.LastGroupDescriptor))
                 {
                     _undoStack.StartContinuedUndoGroup(undoGroupDescriptor);
                 }
@@ -813,31 +813,15 @@ namespace AvaloniaEdit.Document
             text = text?.CreateSnapshot() ?? throw new ArgumentNullException(nameof(text));
             offsetChangeMap?.Freeze();
 
+            object desc = null;
+
             // Only continue the undo group if a letter, number, or mark was inserted
-            // TODO: deleting text doesn't chain properly
-            if (text.TextLength == 1 || length == 1)
-            {
-                bool insert = text.TextLength > 0;
-                CharacterClass charClass = TextUtilities.GetCharacterClass(insert ? text.GetCharAt(0) : _rope[offset]);
-
-                if (charClass == CharacterClass.IdentifierPart)
-                {
-                    string tag = insert ? "insert" : "remove";
-
-                    if (_undoDescriptor is not string undoTag || undoTag != tag)
-                    {
-                        _undoDescriptor = tag;
-                    }
-                }
-            }
-            else
-            {
-                _undoDescriptor = null;
-            }
+            if (text.TextLength == 1 && length == 0 && TextUtilities.GetCharacterClass(text.GetCharAt(0)) == CharacterClass.IdentifierPart)
+                desc = "add";
 
             // Ensure that all changes take place inside an update group.
             // Will also take care of throwing an exception if inDocumentChanging is set.
-            BeginUpdate(_undoDescriptor);
+            BeginUpdate(desc);
             try
             {
                 // protect document change against corruption by other changes inside the event handlers
@@ -1056,7 +1040,6 @@ namespace AvaloniaEdit.Document
         #region UndoStack
 
         public UndoStack _undoStack;
-        private object _undoDescriptor;
 
         /// <summary>
         /// Gets the <see cref="UndoStack"/> of the document.
@@ -1304,9 +1287,6 @@ namespace AvaloniaEdit.Document
         /// <param name="changes">A dictionary where the key is the line number, and the value is the formatting to apply</param>
         private void PerformChangeLineFormats(Dictionary<int, DocumentLineFormat> changes)
         {
-            //Stop the previous chained undo group
-            _undoDescriptor = null;
-
             if(!IsInUpdate)
                 UndoStack.StartUndoGroup();
 
