@@ -1366,5 +1366,30 @@ namespace AvaloniaEdit
                     ScrollViewer.Offset = new Vector(targetX, targetY);
             }
         }
+
+        #region Zooming
+        public static readonly DirectProperty<TextEditor, double> ZoomProperty =
+            AvaloniaProperty.RegisterDirect<TextEditor, double>(nameof(Zoom), e => e.Zoom, (e, z) => e.Zoom = z);
+
+        private double _zoom = 1.0;
+        public double Zoom
+        {
+            get => _zoom;
+            set
+            {
+                SetAndRaise(ZoomProperty, ref _zoom, value);
+
+                var scaleTransform = TextArea.RenderTransform as ScaleTransform ?? new ScaleTransform(1, 1);
+                scaleTransform.ScaleX = value;
+                scaleTransform.ScaleY = value;
+                TextArea.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+                TextArea.RenderTransform = scaleTransform;
+
+                // HACK: Get the TextArea to layout correctly by manipulating its size
+                TextArea.Height = Bounds.Height / value;
+                TextArea.Width = Bounds.Width / value;
+            }
+        }
+        #endregion
     }
 }

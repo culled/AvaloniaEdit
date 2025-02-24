@@ -923,7 +923,7 @@ namespace AvaloniaEdit.Rendering
                 _inMeasure = true;
                 try
                 {
-                    maxWidth = CreateAndMeasureVisualLines(availableDocSize);
+                    maxWidth = CreateAndMeasureVisualLines(availableDocSize) + AdditionalHorizontalScrollAmount;
 
                     if (HasSetDocumentWidth) 
                         maxWidth = DocumentWidth;
@@ -937,10 +937,9 @@ namespace AvaloniaEdit.Rendering
             // remove inline objects only at the end, so that inline objects that were re-used are not removed from the editor
             RemoveInlineObjectsNow();
 
-            maxWidth += AdditionalHorizontalScrollAmount;
             var heightTreeHeight = DocumentHeight;
             var options = Options;
-            double desiredHeight = Math.Min(availableSize.Height, heightTreeHeight);
+            double desiredHeight = Math.Max(availableSize.Height, heightTreeHeight);
             double extraHeightToAllowScrollBelowDocument = 0;
             if (options.AllowScrollBelowDocument)
             {
@@ -949,16 +948,16 @@ namespace AvaloniaEdit.Rendering
                     // HACK: we need to keep at least Caret.MinimumDistanceToViewBorder visible so that we don't scroll back up when the user types after
                     // scrolling to the very bottom.
                     var minVisibleDocumentHeight = DefaultLineHeight;
-                    heightTreeHeight = Math.Max(heightTreeHeight, availableSize.Height);
                     // increase the extend height to allow scrolling below the document
                     extraHeightToAllowScrollBelowDocument = (availableSize.Height * 0.5) - minVisibleDocumentHeight;
+                    desiredHeight += extraHeightToAllowScrollBelowDocument;
                 }
             }
 
             TextLayer.SetVisualLines(_visibleVisualLines);
 
             var totalWidth = maxWidth;
-            var totalHeight = heightTreeHeight + extraHeightToAllowScrollBelowDocument + DocumentMargin.Top + DocumentMargin.Bottom;
+            var totalHeight = desiredHeight + DocumentMargin.Top + DocumentMargin.Bottom;
 
             // Calculate the total size of the document + margins if it has a defined size
             if (HasSetDocumentWidth)
@@ -969,7 +968,7 @@ namespace AvaloniaEdit.Rendering
                           _scrollOffset);
 
             // Size of control (scroll viewport) might be changed during ArrageOverride. We only need document size for now.
-            var documentSize = new Size(maxWidth, heightTreeHeight);
+            var documentSize = new Size(maxWidth, desiredHeight);
 
             // Calculate the placement of the document in the viewport
             var topLeft = new Point(DocumentMargin.Left, DocumentMargin.Top) - _scrollOffset;
