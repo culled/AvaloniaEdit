@@ -381,9 +381,10 @@ namespace AvaloniaEdit.Search
                                  _renderer.CurrentResults.FirstSegment;
 
                     if (result != null)
+                    {
                         SelectResult(result);
-
-                    _currentSearchResultIndex = _renderer.CurrentResults.Count - 1;
+                        _currentSearchResultIndex = GetSearchResultIndex(_renderer.CurrentResults, result);
+                    }
                 }
             }
 
