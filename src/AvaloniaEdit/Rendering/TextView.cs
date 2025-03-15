@@ -1595,7 +1595,10 @@ namespace AvaloniaEdit.Rendering
                 newScrollOffsetX += translatedRectangle.Right - _scrollViewport.Width;
             }
 
-            newScrollOffsetY += translatedRectangle.Top;
+            if (translatedRectangle.Top < 0.0 || translatedRectangle.Bottom > _scrollViewport.Height)
+            {
+                newScrollOffsetY += translatedRectangle.Top;
+            }
 
             newScrollOffsetX = ValidateVisualOffset(newScrollOffsetX);
             newScrollOffsetY = ValidateVisualOffset(newScrollOffsetY);
