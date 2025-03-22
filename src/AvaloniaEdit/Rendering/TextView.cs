@@ -963,26 +963,32 @@ namespace AvaloniaEdit.Rendering
             if (HasSetDocumentWidth)
                 totalWidth += DocumentMargin.Left + DocumentMargin.Right;
 
-            SetScrollData(availableSize,
-                          new Size(totalWidth, totalHeight),
-                          _scrollOffset);
-
             // Size of control (scroll viewport) might be changed during ArrageOverride. We only need document size for now.
             var documentSize = new Size(maxWidth, desiredHeight);
 
             // Calculate the placement of the document in the viewport
-            var topLeft = new Point(DocumentMargin.Left, DocumentMargin.Top) - _scrollOffset;
-            _documentBounds = new Rect(topLeft, new Point(topLeft.X + documentSize.Width, topLeft.Y + documentSize.Height));
+            RecalculateDocumentBounds(availableSize, documentSize, _scrollOffset);
 
-            // Center the document if there is extra space on the sides
-            if (HasSetDocumentWidth && _scrollViewport.Width > _scrollExtent.Width)
-            {
-                _documentBounds = _documentBounds.WithX((_scrollViewport.Width - totalWidth) / 2.0);
-            }
+            SetScrollData(availableSize,
+                          new Size(totalWidth, totalHeight),
+                          _scrollOffset);
 
             VisualLinesChanged?.Invoke(this, EventArgs.Empty);
 
             return new Size(Math.Min(availableSize.Width, totalWidth), Math.Min(desiredHeight, totalHeight));
+        }
+
+        private void RecalculateDocumentBounds(Size viewport, Size documentExtent, Vector scrollOffset)
+        {
+            // Calculate the placement of the document in the viewport
+            var topLeft = new Point(DocumentMargin.Left, DocumentMargin.Top) - scrollOffset;
+            _documentBounds = new Rect(topLeft, new Point(topLeft.X + documentExtent.Width, topLeft.Y + documentExtent.Height));
+
+            // Center the document if there is extra space on the sides
+            if (HasSetDocumentWidth && viewport.Width > documentExtent.Width)
+            {
+                _documentBounds = _documentBounds.WithX((viewport.Width - documentExtent.Width) / 2.0);
+            }
         }
 
         /// <summary>
@@ -1473,6 +1479,7 @@ namespace AvaloniaEdit.Rendering
             if (!_scrollOffset.IsClose(vector))
             {
                 _scrollOffset = vector;
+                RecalculateDocumentBounds(_scrollViewport, _scrollExtent, _scrollOffset);
                 ScrollOffsetChanged?.Invoke(this, EventArgs.Empty);
             }
         }
