@@ -368,7 +368,12 @@ namespace AvaloniaEdit.CodeCompletion
         {
             var textView = TextArea.TextView;
 
-            var position = _visualLocation - textView.ScrollOffset;
+            var position = _visualLocation + textView.DocumentBounds.TopLeft;
+
+            if(TextArea.RenderTransform != null)
+            {
+                position = TextArea.RenderTransform.Value.Transform(position);
+            }
 
             this.HorizontalOffset = position.X;
             this.VerticalOffset = position.Y;
