@@ -100,6 +100,12 @@ namespace AvaloniaEdit
             e.Handled = true;
         }
 
+        protected override void OnSizeChanged(SizeChangedEventArgs e)
+        {
+            base.OnSizeChanged(e);
+            RecalculateZoom();
+        }
+
         #region Document property
         /// <summary>
         /// Document property.
@@ -1385,10 +1391,17 @@ namespace AvaloniaEdit
                 TextArea.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
                 TextArea.RenderTransform = scaleTransform;
 
-                // HACK: Get the TextArea to layout correctly by manipulating its size
-                TextArea.Height = Bounds.Height / value;
-                TextArea.Width = Bounds.Width / value;
+                RecalculateZoom();
             }
+        }
+
+        private void RecalculateZoom()
+        {
+            // HACK: Get the TextArea to layout correctly by manipulating its size
+            TextArea.Height = Bounds.Height / _zoom;
+            TextArea.Width = Bounds.Width / _zoom;
+
+            TextArea.Caret.BringCaretToView();
         }
         #endregion
     }
