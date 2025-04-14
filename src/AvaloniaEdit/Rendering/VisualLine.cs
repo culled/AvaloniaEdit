@@ -21,7 +21,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -309,8 +308,19 @@ namespace AvaloniaEdit.Rendering
         {
             _textLines = new ReadOnlyCollection<TextLine>(textLines);
             Height = LineProperties.Margins.Top + LineProperties.Margins.Bottom;
+            var first = true;
             foreach (var line in textLines)
-                Height += line.Height;
+            {
+                if (first)
+                {
+                    Height += line.Height;
+                    first = false;
+                }
+                else
+                {
+                    Height += line.Height * LineProperties.LineSpacingPercentage;
+                }
+            }
         }
 
         /// <summary>
@@ -409,7 +419,8 @@ namespace AvaloniaEdit.Rendering
                             throw new ArgumentException("Invalid yPositionMode:" + yPositionMode);
                     }
                 }
-                pos += tl.Height;
+
+                pos += tl.Height * LineProperties.LineSpacingPercentage;
             }
             throw new ArgumentException("textLine is not a line in this VisualLine");
         }
@@ -432,9 +443,19 @@ namespace AvaloniaEdit.Rendering
         {
             const double epsilon = 0.0001;
             var pos = VisualTop + LineProperties.Margins.Top;
+            var first = true;
             foreach (var tl in TextLines)
             {
-                pos += tl.Height;
+                if (first)
+                {
+                    pos += tl.Height;
+                    first = false;
+                }
+                else
+                {
+                    pos += tl.Height * LineProperties.LineSpacingPercentage;
+                }
+
                 if (visualTop + epsilon < pos)
                     return tl;
             }
@@ -806,7 +827,18 @@ namespace AvaloniaEdit.Rendering
         public VisualLineDrawingVisual(VisualLine visualLine)
         {
             VisualLine = visualLine;
-            LineHeight = VisualLine.LineProperties.Margins.Top + VisualLine.LineProperties.Margins.Bottom + VisualLine.TextLines.Sum(textLine => textLine.Height);
+            LineHeight = VisualLine.LineProperties.Margins.Top + VisualLine.LineProperties.Margins.Bottom;
+            for (int i = 0; i < VisualLine.TextLines.Count; i++)
+            {
+                if(i == 0)
+                {
+                    LineHeight += VisualLine.TextLines[i].Height;
+                }
+                else
+                {
+                    LineHeight += VisualLine.TextLines[i].Height * VisualLine.LineProperties.LineSpacingPercentage;
+                }
+            }
         }
 
         public override void Render(DrawingContext context)
@@ -815,7 +847,7 @@ namespace AvaloniaEdit.Rendering
             foreach (var textLine in VisualLine.TextLines)
             {
                 textLine.Draw(context, new Point(VisualLine.LineProperties.Margins.Left, pos));
-                pos += textLine.Height;
+                pos += textLine.Height * VisualLine.LineProperties.LineSpacingPercentage;
             }
         }
     }
